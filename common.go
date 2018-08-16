@@ -241,16 +241,15 @@ type ConnectionState struct {
 	ClientHello []byte // ClientHello packet
 }
 
-// ClientAuthType declares the policy the server will follow for
-// TLS Client Authentication.
-type ClientAuthType int
+// The ClientAuthType is the tls.ClientAuthType
+type ClientAuthType = tls.ClientAuthType
 
 const (
-	NoClientCert ClientAuthType = iota
-	RequestClientCert
-	RequireAnyClientCert
-	VerifyClientCertIfGiven
-	RequireAndVerifyClientCert
+	NoClientCert               = tls.NoClientCert
+	RequestClientCert          = tls.RequestClientCert
+	RequireAnyClientCert       = tls.RequireAnyClientCert
+	VerifyClientCertIfGiven    = tls.VerifyClientCertIfGiven
+	RequireAndVerifyClientCert = tls.RequireAndVerifyClientCert
 )
 
 // ClientSessionState contains the state needed by clients to resume TLS
