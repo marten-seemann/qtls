@@ -278,26 +278,25 @@ type ClientSessionCache interface {
 	Put(sessionKey string, cs *ClientSessionState)
 }
 
-// SignatureScheme identifies a signature algorithm supported by TLS. See
-// https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.3.
-type SignatureScheme uint16
+// SignatureScheme is a tls.SignatureScheme
+type SignatureScheme = tls.SignatureScheme
 
 const (
-	PKCS1WithSHA1   SignatureScheme = 0x0201
-	PKCS1WithSHA256 SignatureScheme = 0x0401
-	PKCS1WithSHA384 SignatureScheme = 0x0501
-	PKCS1WithSHA512 SignatureScheme = 0x0601
+	PKCS1WithSHA1   = tls.PKCS1WithSHA1
+	PKCS1WithSHA256 = tls.PKCS1WithSHA256
+	PKCS1WithSHA384 = tls.PKCS1WithSHA384
+	PKCS1WithSHA512 = tls.PKCS1WithSHA512
 
-	PSSWithSHA256 SignatureScheme = 0x0804
-	PSSWithSHA384 SignatureScheme = 0x0805
-	PSSWithSHA512 SignatureScheme = 0x0806
+	PSSWithSHA256 = tls.PSSWithSHA256
+	PSSWithSHA384 = tls.PSSWithSHA384
+	PSSWithSHA512 = tls.PSSWithSHA512
 
-	ECDSAWithP256AndSHA256 SignatureScheme = 0x0403
-	ECDSAWithP384AndSHA384 SignatureScheme = 0x0503
-	ECDSAWithP521AndSHA512 SignatureScheme = 0x0603
+	ECDSAWithP256AndSHA256 = tls.ECDSAWithP256AndSHA256
+	ECDSAWithP384AndSHA384 = tls.ECDSAWithP384AndSHA384
+	ECDSAWithP521AndSHA512 = tls.ECDSAWithP521AndSHA512
 
 	// Legacy signature and hash algorithms for TLS 1.2.
-	ECDSAWithSHA1 SignatureScheme = 0x0203
+	ECDSAWithSHA1 = tls.ECDSAWithSHA1
 )
 
 // ClientHelloInfo contains information from a ClientHello message in order to
