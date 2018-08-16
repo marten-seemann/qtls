@@ -108,19 +108,17 @@ const (
 	pskDHEKeyExchange uint8 = 1
 )
 
-// CurveID is the type of a TLS identifier for an elliptic curve. See
-// http://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-8
-//
+// CurveID is tls.CurveID
 // TLS 1.3 refers to these as Groups, but this library implements only
 // curve-based ones anyway. See https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.4.
-type CurveID uint16
+type CurveID = tls.CurveID
 
 const (
 	// Exported IDs
-	CurveP256 CurveID = 23
-	CurveP384 CurveID = 24
-	CurveP521 CurveID = 25
-	X25519    CurveID = 29
+	CurveP256 = tls.CurveP256
+	CurveP384 = tls.CurveP384
+	CurveP521 = tls.CurveP521
+	X25519    = tls.X25519
 
 	// Experimental KEX
 	HybridSIDHp503Curve25519 CurveID = 0xFE30
