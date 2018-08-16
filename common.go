@@ -382,31 +382,20 @@ type CertificateRequestInfo struct {
 	SignatureSchemes []SignatureScheme
 }
 
-// RenegotiationSupport enumerates the different levels of support for TLS
-// renegotiation. TLS renegotiation is the act of performing subsequent
-// handshakes on a connection after the first. This significantly complicates
-// the state machine and has been the source of numerous, subtle security
-// issues. Initiating a renegotiation is not supported, but support for
-// accepting renegotiation requests may be enabled.
-//
-// Even when enabled, the server may not change its identity between handshakes
-// (i.e. the leaf certificate must be the same). Additionally, concurrent
-// handshake and application data flow is not permitted so renegotiation can
-// only be used with protocols that synchronise with the renegotiation, such as
-// HTTPS.
-type RenegotiationSupport int
+// RenegotiationSupport is a tls.RenegotiationSupport
+type RenegotiationSupport = tls.RenegotiationSupport
 
 const (
 	// RenegotiateNever disables renegotiation.
-	RenegotiateNever RenegotiationSupport = iota
+	RenegotiateNever = tls.RenegotiateNever
 
 	// RenegotiateOnceAsClient allows a remote server to request
 	// renegotiation once per connection.
-	RenegotiateOnceAsClient
+	RenegotiateOnceAsClient = tls.RenegotiateOnceAsClient
 
 	// RenegotiateFreelyAsClient allows a remote server to repeatedly
 	// request renegotiation.
-	RenegotiateFreelyAsClient
+	RenegotiateFreelyAsClient = tls.RenegotiateFreelyAsClient
 )
 
 // A Config structure is used to configure a TLS client or server.
