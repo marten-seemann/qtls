@@ -9,6 +9,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/sha512"
+	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -994,27 +995,8 @@ func (c *Config) writeKeyLog(what string, clientRandom, masterSecret []byte) err
 // and is only for debugging, so a global mutex saves space.
 var writerMutex sync.Mutex
 
-// A Certificate is a chain of one or more certificates, leaf first.
-type Certificate struct {
-	Certificate [][]byte
-	// PrivateKey contains the private key corresponding to the public key
-	// in Leaf. For a server, this must implement crypto.Signer and/or
-	// crypto.Decrypter, with an RSA or ECDSA PublicKey. For a client
-	// (performing client authentication), this must be a crypto.Signer
-	// with an RSA or ECDSA PublicKey.
-	PrivateKey crypto.PrivateKey
-	// OCSPStaple contains an optional OCSP response which will be served
-	// to clients that request it.
-	OCSPStaple []byte
-	// SignedCertificateTimestamps contains an optional list of Signed
-	// Certificate Timestamps which will be served to clients that request it.
-	SignedCertificateTimestamps [][]byte
-	// Leaf is the parsed form of the leaf certificate, which may be
-	// initialized using x509.ParseCertificate to reduce per-handshake
-	// processing for TLS clients doing client authentication. If nil, the
-	// leaf certificate will be parsed as needed.
-	Leaf *x509.Certificate
-}
+// A Certificate is a tls.Certificate
+type Certificate = tls.Certificate
 
 type handshakeMessage interface {
 	marshal() []byte
