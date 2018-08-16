@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package tls_test
+package qtls_test
 
 import (
 	"crypto/tls"
@@ -116,51 +116,51 @@ func ExampleConfig_keyLogWriter_TLS12() {
 	// CLIENT_RANDOM 0000000000000000000000000000000000000000000000000000000000000000 baca0df460a688e44ce018b025183cc2353ae01f89755ef766eedd3ecc302888ee3b3a22962e45f48c20df15a98c0e80
 }
 
-func ExampleConfig_keyLogWriter_TLS13() {
-	// Debugging TLS applications by decrypting a network traffic capture.
+// func ExampleConfig_keyLogWriter_TLS13() {
+// 	// Debugging TLS applications by decrypting a network traffic capture.
 
-	// WARNING: Use of KeyLogWriter compromises security and should only be
-	// used for debugging.
+// 	// WARNING: Use of KeyLogWriter compromises security and should only be
+// 	// used for debugging.
 
-	// Dummy test HTTP server for the example with insecure random so output is
-	// reproducible.
-	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	server.TLS = &tls.Config{
-		Rand: zeroSource{}, // for example only; don't do this.
-	}
-	server.StartTLS()
-	defer server.Close()
+// 	// Dummy test HTTP server for the example with insecure random so output is
+// 	// reproducible.
+// 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+// 	server.TLS = &tls.Config{
+// 		Rand: zeroSource{}, // for example only; don't do this.
+// 	}
+// 	server.StartTLS()
+// 	defer server.Close()
 
-	// Typically the log would go to an open file:
-	// w, err := os.OpenFile("tls-secrets.txt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	w := os.Stdout
+// 	// Typically the log would go to an open file:
+// 	// w, err := os.OpenFile("tls-secrets.txt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+// 	w := os.Stdout
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				KeyLogWriter: w,
+// 	client := &http.Client{
+// 		Transport: &http.Transport{
+// 			TLSClientConfig: &tls.Config{
+// 				KeyLogWriter: w,
 
-				Rand:               zeroSource{}, // for reproducible output; don't do this.
-				InsecureSkipVerify: true,         // test server certificate is not trusted.
-			},
-		},
-	}
-	resp, err := client.Get(server.URL)
-	if err != nil {
-		log.Fatalf("Failed to get URL: %v", err)
-	}
-	resp.Body.Close()
+// 				Rand:               zeroSource{}, // for reproducible output; don't do this.
+// 				InsecureSkipVerify: true,         // test server certificate is not trusted.
+// 			},
+// 		},
+// 	}
+// 	resp, err := client.Get(server.URL)
+// 	if err != nil {
+// 		log.Fatalf("Failed to get URL: %v", err)
+// 	}
+// 	resp.Body.Close()
 
-	// The resulting file can be used with Wireshark to decrypt the TLS
-	// connection by setting (Pre)-Master-Secret log filename in SSL Protocol
-	// preferences.
+// 	// The resulting file can be used with Wireshark to decrypt the TLS
+// 	// connection by setting (Pre)-Master-Secret log filename in SSL Protocol
+// 	// preferences.
 
-	// Output:
-	// CLIENT_HANDSHAKE_TRAFFIC_SECRET 0000000000000000000000000000000000000000000000000000000000000000 b946c84f46f53bd410368a1fd7d53873e74bedd53b4b1a4b125be40c8b0510a1
-	// SERVER_HANDSHAKE_TRAFFIC_SECRET 0000000000000000000000000000000000000000000000000000000000000000 b6c44e95e34cb2616ff2e9a1163577aa1aa5cb3af8df16d0fdbbbaf15f415c8e
-	// SERVER_TRAFFIC_SECRET_0 0000000000000000000000000000000000000000000000000000000000000000 cbecc42509a124ae517f6c9aaae1961d755ab4268548b40b0c7840a9643240e8
-	// CLIENT_TRAFFIC_SECRET_0 0000000000000000000000000000000000000000000000000000000000000000 8f6dd1476706ea8147d829347937694496a7d62d6d01de0a1b4820140d01cad0
-}
+// 	// Output:
+// 	// CLIENT_HANDSHAKE_TRAFFIC_SECRET 0000000000000000000000000000000000000000000000000000000000000000 b946c84f46f53bd410368a1fd7d53873e74bedd53b4b1a4b125be40c8b0510a1
+// 	// SERVER_HANDSHAKE_TRAFFIC_SECRET 0000000000000000000000000000000000000000000000000000000000000000 b6c44e95e34cb2616ff2e9a1163577aa1aa5cb3af8df16d0fdbbbaf15f415c8e
+// 	// SERVER_TRAFFIC_SECRET_0 0000000000000000000000000000000000000000000000000000000000000000 cbecc42509a124ae517f6c9aaae1961d755ab4268548b40b0c7840a9643240e8
+// 	// CLIENT_TRAFFIC_SECRET_0 0000000000000000000000000000000000000000000000000000000000000000 8f6dd1476706ea8147d829347937694496a7d62d6d01de0a1b4820140d01cad0
+// }
 
 func ExampleLoadX509KeyPair() {
 	cert, err := tls.LoadX509KeyPair("testdata/example-cert.pem", "testdata/example-key.pem")

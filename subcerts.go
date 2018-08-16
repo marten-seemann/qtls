@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package tls
+package qtls
 
 // Delegated credentials for TLS
 // (https://tools.ietf.org/html/draft-ietf-tls-subcerts-02) is an IETF Internet

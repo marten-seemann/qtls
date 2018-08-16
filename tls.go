@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package tls partially implements TLS 1.2, as specified in RFC 5246.
-package tls
+package qtls
 
 // BUG(agl): The crypto/tls package only implements some countermeasures
 // against Lucky13 attacks on CBC-mode encryption, and only on SHA1
