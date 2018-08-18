@@ -617,6 +617,22 @@ type Config struct {
 	// This value has no meaning for the client.
 	GetDelegatedCredential func(*ClientHelloInfo, uint16) ([]byte, crypto.PrivateKey, error)
 
+	// GetExtensions, if not nil, is called before a message that allows
+	// sending of extensions is sent.
+	// Currently only implemented for the ClientHello message (for the client)
+	// and for the EncryptedExtensions message (for the server).
+	// Only valid for TLS 1.3.
+	GetExtensions func(handshakeMessageType uint8) []Extension
+
+	// ReceivedExtensions, if not nil, is called when a message that allows the
+	// inclusion of extensions is received.
+	// It is called with an empty slice of extensions, if the message didn't
+	// contain any extensions.
+	// Currently only implemented for the ClientHello message (sent by the
+	// client) and for the EncryptedExtensions message (sent by the server).
+	// Only valid for TLS 1.3.
+	ReceivedExtensions func(handshakeMessageType uint8, exts []Extension)
+
 	serverInitOnce sync.Once // guards calling (*Config).serverInit
 
 	// mutex protects sessionTicketKeys.
@@ -699,6 +715,8 @@ func (c *Config) Clone() *Config {
 		SessionTicketSealer:         c.SessionTicketSealer,
 		AcceptDelegatedCredential:   c.AcceptDelegatedCredential,
 		GetDelegatedCredential:      c.GetDelegatedCredential,
+		GetExtensions:               c.GetExtensions,
+		ReceivedExtensions:          c.ReceivedExtensions,
 		sessionTicketKeys:           sessionTicketKeys,
 		UseExtendedMasterSecret:     c.UseExtendedMasterSecret,
 	}
