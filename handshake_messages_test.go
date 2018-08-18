@@ -58,7 +58,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 
 			m1 := v.Interface().(testMessage)
 			marshaled := m1.marshal()
-			m2 := iface.(testMessage)
+			m2 := reflect.New(reflect.ValueOf(iface).Elem().Type()).Interface().(testMessage)
 			if m2.unmarshal(marshaled) != alertSuccess {
 				t.Errorf("#%d.%d failed to unmarshal %#v %x", i, j, m1, marshaled)
 				break
@@ -236,6 +236,13 @@ func (*encryptedExtensionsMsg) Generate(rand *rand.Rand, size int) reflect.Value
 	}
 	if rand.Intn(10) > 5 {
 		m.earlyData = true
+	}
+	if numExt := rand.Intn(4); numExt > 0 {
+		for i := 0; i < numExt; i++ {
+			extType := 1000 + uint16(rand.Intn(5000))
+			m.additionalExtensions = append(m.additionalExtensions,
+				extension{extType: extType, data: randomBytes(rand.Intn(50), rand)})
+		}
 	}
 
 	return reflect.ValueOf(m)

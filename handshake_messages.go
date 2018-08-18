@@ -1234,12 +1234,24 @@ type encryptedExtensionsMsg struct {
 	raw          []byte
 	alpnProtocol string
 	earlyData    bool
+
+	additionalExtensions []extension
 }
 
 func (m *encryptedExtensionsMsg) equal(i interface{}) bool {
 	m1, ok := i.(*encryptedExtensionsMsg)
 	if !ok {
 		return false
+	}
+
+	if len(m.additionalExtensions) != len(m1.additionalExtensions) {
+		return false
+	}
+	for i, ex := range m.additionalExtensions {
+		ex1 := m1.additionalExtensions[i]
+		if ex.extType != ex1.extType || !bytes.Equal(ex.data, ex1.data) {
+			return false
+		}
 	}
 
 	return bytes.Equal(m.raw, m1.raw) &&
@@ -1263,6 +1275,11 @@ func (m *encryptedExtensionsMsg) marshal() []byte {
 			panic("invalid ALPN protocol")
 		}
 		length += 2 + 2 + 2 + 1 + alpnLen
+	}
+	if len(m.additionalExtensions) > 0 {
+		for _, ex := range m.additionalExtensions {
+			length += 4 + len(ex.data)
+		}
 	}
 
 	x := make([]byte, 4+length)
@@ -1296,6 +1313,16 @@ func (m *encryptedExtensionsMsg) marshal() []byte {
 		z = z[4:]
 	}
 
+	for _, ex := range m.additionalExtensions {
+		z[0] = byte(ex.extType >> 8)
+		z[1] = byte(ex.extType)
+		l := len(ex.data)
+		z[2] = byte(l >> 8)
+		z[3] = byte(l)
+		copy(z[4:], ex.data)
+		z = z[4+l:]
+	}
+
 	m.raw = x
 	return x
 }
@@ -1319,14 +1346,14 @@ func (m *encryptedExtensionsMsg) unmarshal(data []byte) alert {
 		if len(data) < 4 {
 			return alertDecodeError
 		}
-		extension := uint16(data[0])<<8 | uint16(data[1])
+		ext := uint16(data[0])<<8 | uint16(data[1])
 		length := int(data[2])<<8 | int(data[3])
 		data = data[4:]
 		if len(data) < length {
 			return alertDecodeError
 		}
 
-		switch extension {
+		switch ext {
 		case extensionALPN:
 			d := data[:length]
 			if len(d) < 3 {
@@ -1350,6 +1377,9 @@ func (m *encryptedExtensionsMsg) unmarshal(data []byte) alert {
 		case extensionEarlyData:
 			// https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.8
 			m.earlyData = true
+		default:
+			m.additionalExtensions = append(m.additionalExtensions,
+				extension{extType: ext, data: data[:length]})
 		}
 
 		data = data[length:]

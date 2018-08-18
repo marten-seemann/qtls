@@ -74,6 +74,11 @@ const (
 	compressionNone uint8 = 0
 )
 
+type extension struct {
+	extType uint16
+	data    []byte
+}
+
 // TLS extension numbers
 const (
 	extensionServerName              uint16 = 0
