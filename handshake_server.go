@@ -259,6 +259,9 @@ Curves:
 		hs.hello.secureRenegotiationSupported = hs.clientHello.secureRenegotiationSupported
 		hs.hello.compressionMethod = compressionNone
 	} else {
+		if hs.c.config.ReceivedExtensions != nil {
+			hs.c.config.ReceivedExtensions(typeClientHello, hs.clientHello.additionalExtensions)
+		}
 		hs.hello = new(serverHelloMsg)
 		hs.hello13Enc = new(encryptedExtensionsMsg)
 		if hs.c.config.GetExtensions != nil {
