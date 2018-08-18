@@ -51,7 +51,7 @@ type clientHelloMsg struct {
 	earlyData                        bool
 	delegatedCredential              bool
 	extendedMSSupported              bool // RFC7627
-	additionalExtensions             []extension
+	additionalExtensions             []Extension
 }
 
 // Function used for signature_algorithms and signature_algorithrms_cert
@@ -114,7 +114,7 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 	}
 	for i, ex := range m.additionalExtensions {
 		ex1 := m1.additionalExtensions[i]
-		if ex.extType != ex1.extType || !bytes.Equal(ex.data, ex1.data) {
+		if ex.Type != ex1.Type || !bytes.Equal(ex.Data, ex1.Data) {
 			return false
 		}
 	}
@@ -226,7 +226,7 @@ func (m *clientHelloMsg) marshal() []byte {
 	if len(m.additionalExtensions) > 0 {
 		numExtensions += len(m.additionalExtensions)
 		for _, ex := range m.additionalExtensions {
-			extensionsLength += len(ex.data)
+			extensionsLength += len(ex.Data)
 		}
 	}
 	if numExtensions > 0 {
@@ -455,12 +455,12 @@ func (m *clientHelloMsg) marshal() []byte {
 		z = z[4:]
 	}
 	for _, ex := range m.additionalExtensions {
-		z[0] = byte(ex.extType >> 8)
-		z[1] = byte(ex.extType)
-		l := len(ex.data)
+		z[0] = byte(ex.Type >> 8)
+		z[1] = byte(ex.Type)
+		l := len(ex.Data)
 		z[2] = byte(l >> 8)
 		z[3] = byte(l)
-		copy(z[4:], ex.data)
+		copy(z[4:], ex.Data)
 		z = z[4+l:]
 	}
 
@@ -804,7 +804,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) alert {
 			}
 		default:
 			m.additionalExtensions = append(m.additionalExtensions,
-				extension{extType: ext, data: data[:length]})
+				Extension{Type: ext, Data: data[:length]})
 		}
 		data = data[length:]
 		bindersOffset += length
@@ -1264,7 +1264,7 @@ type encryptedExtensionsMsg struct {
 	alpnProtocol string
 	earlyData    bool
 
-	additionalExtensions []extension
+	additionalExtensions []Extension
 }
 
 func (m *encryptedExtensionsMsg) equal(i interface{}) bool {
@@ -1278,7 +1278,7 @@ func (m *encryptedExtensionsMsg) equal(i interface{}) bool {
 	}
 	for i, ex := range m.additionalExtensions {
 		ex1 := m1.additionalExtensions[i]
-		if ex.extType != ex1.extType || !bytes.Equal(ex.data, ex1.data) {
+		if ex.Type != ex1.Type || !bytes.Equal(ex.Data, ex1.Data) {
 			return false
 		}
 	}
@@ -1307,7 +1307,7 @@ func (m *encryptedExtensionsMsg) marshal() []byte {
 	}
 	if len(m.additionalExtensions) > 0 {
 		for _, ex := range m.additionalExtensions {
-			length += 4 + len(ex.data)
+			length += 4 + len(ex.Data)
 		}
 	}
 
@@ -1343,12 +1343,12 @@ func (m *encryptedExtensionsMsg) marshal() []byte {
 	}
 
 	for _, ex := range m.additionalExtensions {
-		z[0] = byte(ex.extType >> 8)
-		z[1] = byte(ex.extType)
-		l := len(ex.data)
+		z[0] = byte(ex.Type >> 8)
+		z[1] = byte(ex.Type)
+		l := len(ex.Data)
 		z[2] = byte(l >> 8)
 		z[3] = byte(l)
-		copy(z[4:], ex.data)
+		copy(z[4:], ex.Data)
 		z = z[4+l:]
 	}
 
@@ -1408,7 +1408,7 @@ func (m *encryptedExtensionsMsg) unmarshal(data []byte) alert {
 			m.earlyData = true
 		default:
 			m.additionalExtensions = append(m.additionalExtensions,
-				extension{extType: ext, data: data[:length]})
+				Extension{Type: ext, Data: data[:length]})
 		}
 
 		data = data[length:]

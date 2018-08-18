@@ -180,7 +180,7 @@ func (*clientHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
 	if numExt := rand.Intn(4); numExt > 0 {
 		extType := 1000 + uint16(rand.Intn(5000))
 		m.additionalExtensions = append(m.additionalExtensions,
-			extension{extType: extType, data: randomBytes(rand.Intn(50), rand)})
+			Extension{Type: extType, Data: randomBytes(rand.Intn(50), rand)})
 	}
 
 	return reflect.ValueOf(m)
@@ -247,7 +247,7 @@ func (*encryptedExtensionsMsg) Generate(rand *rand.Rand, size int) reflect.Value
 		for i := 0; i < numExt; i++ {
 			extType := 1000 + uint16(rand.Intn(5000))
 			m.additionalExtensions = append(m.additionalExtensions,
-				extension{extType: extType, data: randomBytes(rand.Intn(50), rand)})
+				Extension{Type: extType, Data: randomBytes(rand.Intn(50), rand)})
 		}
 	}
 
