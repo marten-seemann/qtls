@@ -177,6 +177,12 @@ func (*clientHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
 	if rand.Intn(10) > 5 {
 		m.extendedMSSupported = true
 	}
+	if numExt := rand.Intn(4); numExt > 0 {
+		extType := 1000 + uint16(rand.Intn(5000))
+		m.additionalExtensions = append(m.additionalExtensions,
+			extension{extType: extType, data: randomBytes(rand.Intn(50), rand)})
+	}
+
 	return reflect.ValueOf(m)
 }
 
