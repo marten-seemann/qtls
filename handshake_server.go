@@ -261,6 +261,9 @@ Curves:
 	} else {
 		hs.hello = new(serverHelloMsg)
 		hs.hello13Enc = new(encryptedExtensionsMsg)
+		if hs.c.config.GetExtensions != nil {
+			hs.hello13Enc.additionalExtensions = hs.c.config.GetExtensions(typeEncryptedExtensions)
+		}
 		hs.hello.vers = c.vers
 		hs.hello.random = make([]byte, 32)
 		hs.hello.sessionId = hs.clientHello.sessionId

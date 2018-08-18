@@ -851,13 +851,15 @@ func getCertsFromEntries(certEntries []certificateEntry) [][]byte {
 	return certs
 }
 
-func (hs *clientHandshakeState) processEncryptedExtensions(ee *encryptedExtensionsMsg) error {
+func (hs *clientHandshakeState) processEncryptedExtensions(ee *encryptedExtensionsMsg) {
 	c := hs.c
 	if ee.alpnProtocol != "" {
 		c.clientProtocol = ee.alpnProtocol
 		c.clientProtocolFallback = false
 	}
-	return nil
+	if hs.c.config.ReceivedExtensions != nil {
+		hs.c.config.ReceivedExtensions(typeEncryptedExtensions, ee.additionalExtensions)
+	}
 }
 
 func verifyPeerHandshakeSignature(
@@ -1019,9 +1021,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 		c.sendAlert(alertUnexpectedMessage)
 		return unexpectedMessageError(encryptedExtensions, msg)
 	}
-	if err := hs.processEncryptedExtensions(encryptedExtensions); err != nil {
-		return err
-	}
+	hs.processEncryptedExtensions(encryptedExtensions)
 	hs.keySchedule.write(encryptedExtensions.marshal())
 
 	// PSKs are not supported, so receive Certificate message.
