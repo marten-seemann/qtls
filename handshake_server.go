@@ -42,11 +42,11 @@ type serverHandshakeState struct {
 	certsFromClient [][]byte
 
 	// TLS 1.3 fields
-	hello13Enc        *encryptedExtensionsMsg
-	keySchedule       *keySchedule13
-	clientFinishedKey []byte
-	hsClientCipher    interface{}
-	appClientCipher   interface{}
+	hello13Enc             *encryptedExtensionsMsg
+	keySchedule            *keySchedule13
+	clientFinishedKey      []byte
+	hsClientTrafficSecret  []byte
+	appClientTrafficSecret []byte
 }
 
 // serverHandshake performs a TLS handshake as a server.
