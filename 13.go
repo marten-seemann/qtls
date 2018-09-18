@@ -254,8 +254,7 @@ CurvePreferenceLoop:
 	hs.keySchedule.setSecret(ecdheSecret)
 	hs.hsClientTrafficSecret = hs.keySchedule.deriveSecret(secretHandshakeClient)
 	hsServerTrafficSecret := hs.keySchedule.deriveSecret(secretHandshakeServer)
-	serverCipher := hs.keySchedule.prepareCipher(hsServerTrafficSecret)
-	c.out.setCipher(c.vers, serverCipher)
+	c.out.setKey(c.vers, hs.keySchedule.suite, hsServerTrafficSecret)
 
 	serverFinishedKey := hkdfExpandLabel(hash, hsServerTrafficSecret, nil, "finished", hashSize)
 	hs.clientFinishedKey = hkdfExpandLabel(hash, hs.hsClientTrafficSecret, nil, "finished", hashSize)
@@ -297,20 +296,17 @@ CurvePreferenceLoop:
 
 	hs.keySchedule.setSecret(nil) // derive master secret
 	serverAppTrafficSecret := hs.keySchedule.deriveSecret(secretApplicationServer)
-	appServerCipher := hs.keySchedule.prepareCipher(serverAppTrafficSecret)
-	c.out.setCipher(c.vers, appServerCipher)
+	c.out.setKey(c.vers, hs.keySchedule.suite, serverAppTrafficSecret)
 
 	if c.hand.Len() > 0 {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
 	hs.appClientTrafficSecret = hs.keySchedule.deriveSecret(secretApplicationClient)
 	if hs.hello13Enc.earlyData {
-		earlyClientCipher := hs.keySchedule.prepareCipher(earlyClientTrafficSecret)
-		c.in.setCipher(c.vers, earlyClientCipher)
+		c.in.setKey(c.vers, hs.keySchedule.suite, earlyClientTrafficSecret)
 		c.phase = readingEarlyData
 	} else {
-		hsClientCipher := hs.keySchedule.prepareCipher(hs.hsClientTrafficSecret)
-		c.in.setCipher(c.vers, hsClientCipher)
+		c.in.setKey(c.vers, hs.keySchedule.suite, hs.hsClientTrafficSecret)
 		if hs.clientHello.earlyData {
 			c.phase = discardingEarlyData
 		} else {
@@ -422,8 +418,7 @@ func (hs *serverHandshakeState) readClientFinished13(hasConfirmLock bool) error 
 	if c.hand.Len() > 0 {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
-	appClientCipher := hs.keySchedule.prepareCipher(hs.appClientTrafficSecret)
-	c.in.setCipher(c.vers, appClientCipher)
+	c.in.setKey(c.vers, hs.keySchedule.suite, hs.appClientTrafficSecret)
 	c.in.traceErr, c.out.traceErr = nil, nil
 	c.phase = handshakeConfirmed
 	atomic.StoreInt32(&c.handshakeConfirmed, 1)
@@ -519,8 +514,7 @@ func (c *Conn) handleEndOfEarlyData() error {
 	}
 	c.hs.keySchedule.write(endOfEarlyData.marshal())
 	c.phase = waitingClientFinished
-	hsClientCipher := c.hs.keySchedule.prepareCipher(c.hs.hsClientTrafficSecret)
-	c.in.setCipher(c.vers, hsClientCipher)
+	c.in.setKey(c.vers, c.hs.keySchedule.suite, c.hs.hsClientTrafficSecret)
 	return nil
 }
 
@@ -1012,8 +1006,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	}
 	// Do not change the sender key yet, the server must authenticate first.
 	serverHandshakeSecret := hs.keySchedule.deriveSecret(secretHandshakeServer)
-	serverCipher := hs.keySchedule.prepareCipher(serverHandshakeSecret)
-	c.in.setCipher(c.vers, serverCipher)
+	c.in.setKey(c.vers, hs.keySchedule.suite, serverHandshakeSecret)
 
 	// Calculate MAC key for Finished messages.
 	serverFinishedKey := hkdfExpandLabel(hash, serverHandshakeSecret, nil, "finished", hashSize)
@@ -1133,8 +1126,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	hs.keySchedule.setSecret(nil) // derive master secret
 
 	// Change outbound handshake cipher for final step
-	clientCipher := hs.keySchedule.prepareCipher(clientHandshakeSecret)
-	c.out.setCipher(c.vers, clientCipher)
+	c.out.setKey(c.vers, hs.keySchedule.suite, clientHandshakeSecret)
 
 	clientAppTrafficSecret := hs.keySchedule.deriveSecret(secretApplicationClient)
 	serverAppTrafficSecret := hs.keySchedule.deriveSecret(secretApplicationServer)
@@ -1158,14 +1150,13 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	}
 
 	// Handshake done, set application traffic secret
-	appClientCipher := hs.keySchedule.prepareCipher(clientAppTrafficSecret)
-	c.out.setCipher(c.vers, appClientCipher)
+	// TODO store initial traffic secret key for KeyUpdate GH #85
+	c.out.setKey(c.vers, hs.keySchedule.suite, clientAppTrafficSecret)
 	if c.hand.Len() > 0 {
 		c.sendAlert(alertUnexpectedMessage)
 		return errors.New("tls: unexpected data after handshake")
 	}
-	appServerCipher := hs.keySchedule.prepareCipher(serverAppTrafficSecret)
-	c.in.setCipher(c.vers, appServerCipher)
+	c.in.setKey(c.vers, hs.keySchedule.suite, serverAppTrafficSecret)
 	return nil
 }
 
