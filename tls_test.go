@@ -726,6 +726,7 @@ func TestCloneNonFuncFields(t *testing.T) {
 			f.Set(reflect.ValueOf(false))
 		case "UseExtendedMasterSecret":
 			f.Set(reflect.ValueOf(false))
+		case "AlternativeRecordLayer":
 		default:
 			t.Errorf("all fields must be accounted for, but saw unknown field %q", fn)
 		}

@@ -646,6 +646,16 @@ type Config struct {
 	// UseExtendedMasterSecret indicates whether or not the connection
 	// should use the extended master secret computation if available
 	UseExtendedMasterSecret bool
+
+	// AlternativeRecordLayer is used by QUIC
+	AlternativeRecordLayer RecordLayer
+}
+
+type RecordLayer interface {
+	SetReadKey(suite *CipherSuite, trafficSecret []byte)
+	SetWriteKey(suite *CipherSuite, trafficSecret []byte)
+	ReadHandshakeMessage() ([]byte, error)
+	WriteRecord([]byte) (int, error)
 }
 
 // ticketKeyNameLen is the number of bytes of identifier that is prepended to

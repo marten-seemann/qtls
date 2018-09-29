@@ -78,6 +78,15 @@ type cipherSuite struct {
 	aead   func(key, fixedNonce []byte) cipher.AEAD
 }
 
+type CipherSuite struct {
+	cipherSuite
+}
+
+func (c *CipherSuite) Hash() crypto.Hash                       { return hashForSuite(&c.cipherSuite) }
+func (c *CipherSuite) KeyLen() int                             { return c.keyLen }
+func (c *CipherSuite) IVLen() int                              { return c.ivLen }
+func (c *CipherSuite) AEAD(key, fixedNonce []byte) cipher.AEAD { return c.aead(key, fixedNonce) }
+
 var cipherSuites = []*cipherSuite{
 	// TLS 1.3 ciphersuites specify only the AEAD and the HKDF hash.
 	{TLS_CHACHA20_POLY1305_SHA256, 32, 0, 12, nil, suiteTLS13, nil, nil, aeadChaCha20Poly1305},

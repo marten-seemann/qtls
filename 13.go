@@ -254,6 +254,7 @@ CurvePreferenceLoop:
 	hs.keySchedule.setSecret(ecdheSecret)
 	hs.hsClientTrafficSecret = hs.keySchedule.deriveSecret(secretHandshakeClient)
 	hsServerTrafficSecret := hs.keySchedule.deriveSecret(secretHandshakeServer)
+	c.out.exportKey(hs.keySchedule.suite, hsServerTrafficSecret)
 	c.out.setKey(c.vers, hs.keySchedule.suite, hsServerTrafficSecret)
 
 	serverFinishedKey := hkdfExpandLabel(hash, hsServerTrafficSecret, nil, "finished", hashSize)
@@ -296,6 +297,7 @@ CurvePreferenceLoop:
 
 	hs.keySchedule.setSecret(nil) // derive master secret
 	serverAppTrafficSecret := hs.keySchedule.deriveSecret(secretApplicationServer)
+	c.out.exportKey(hs.keySchedule.suite, serverAppTrafficSecret)
 	c.out.setKey(c.vers, hs.keySchedule.suite, serverAppTrafficSecret)
 
 	if c.hand.Len() > 0 {
@@ -303,9 +305,11 @@ CurvePreferenceLoop:
 	}
 	hs.appClientTrafficSecret = hs.keySchedule.deriveSecret(secretApplicationClient)
 	if hs.hello13Enc.earlyData {
+		c.in.exportKey(hs.keySchedule.suite, earlyClientTrafficSecret)
 		c.in.setKey(c.vers, hs.keySchedule.suite, earlyClientTrafficSecret)
 		c.phase = readingEarlyData
 	} else {
+		c.in.exportKey(hs.keySchedule.suite, hs.hsClientTrafficSecret)
 		c.in.setKey(c.vers, hs.keySchedule.suite, hs.hsClientTrafficSecret)
 		if hs.clientHello.earlyData {
 			c.phase = discardingEarlyData
@@ -418,6 +422,7 @@ func (hs *serverHandshakeState) readClientFinished13(hasConfirmLock bool) error 
 	if c.hand.Len() > 0 {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
+	c.in.exportKey(hs.keySchedule.suite, hs.appClientTrafficSecret)
 	c.in.setKey(c.vers, hs.keySchedule.suite, hs.appClientTrafficSecret)
 	c.in.traceErr, c.out.traceErr = nil, nil
 	c.phase = handshakeConfirmed
@@ -514,6 +519,7 @@ func (c *Conn) handleEndOfEarlyData() error {
 	}
 	c.hs.keySchedule.write(endOfEarlyData.marshal())
 	c.phase = waitingClientFinished
+	c.in.exportKey(c.hs.keySchedule.suite, c.hs.hsClientTrafficSecret)
 	c.in.setKey(c.vers, c.hs.keySchedule.suite, c.hs.hsClientTrafficSecret)
 	return nil
 }
@@ -1006,6 +1012,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	}
 	// Do not change the sender key yet, the server must authenticate first.
 	serverHandshakeSecret := hs.keySchedule.deriveSecret(secretHandshakeServer)
+	c.in.exportKey(hs.keySchedule.suite, serverHandshakeSecret)
 	c.in.setKey(c.vers, hs.keySchedule.suite, serverHandshakeSecret)
 
 	// Calculate MAC key for Finished messages.
@@ -1126,6 +1133,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	hs.keySchedule.setSecret(nil) // derive master secret
 
 	// Change outbound handshake cipher for final step
+	c.out.exportKey(hs.keySchedule.suite, clientHandshakeSecret)
 	c.out.setKey(c.vers, hs.keySchedule.suite, clientHandshakeSecret)
 
 	clientAppTrafficSecret := hs.keySchedule.deriveSecret(secretApplicationClient)
@@ -1151,11 +1159,13 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 
 	// Handshake done, set application traffic secret
 	// TODO store initial traffic secret key for KeyUpdate GH #85
+	c.out.exportKey(hs.keySchedule.suite, clientAppTrafficSecret)
 	c.out.setKey(c.vers, hs.keySchedule.suite, clientAppTrafficSecret)
 	if c.hand.Len() > 0 {
 		c.sendAlert(alertUnexpectedMessage)
 		return errors.New("tls: unexpected data after handshake")
 	}
+	c.in.exportKey(hs.keySchedule.suite, serverAppTrafficSecret)
 	c.in.setKey(c.vers, hs.keySchedule.suite, serverAppTrafficSecret)
 	return nil
 }

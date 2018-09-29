@@ -197,6 +197,8 @@ type halfConn struct {
 	// used to save allocating a new buffer for each MAC.
 	inDigestBuf, outDigestBuf []byte
 
+	setKeyCallback func(suite *CipherSuite, trafficSecret []byte)
+
 	traceErr func(error)
 }
 
@@ -232,7 +234,16 @@ func (hc *halfConn) changeCipherSpec() error {
 	return nil
 }
 
+func (hc *halfConn) exportKey(suite *cipherSuite, trafficSecret []byte) {
+	if hc.setKeyCallback != nil {
+		hc.setKeyCallback(&CipherSuite{*suite}, trafficSecret)
+	}
+}
+
 func (hc *halfConn) setKey(version uint16, suite *cipherSuite, trafficSecret []byte) {
+	if hc.setKeyCallback != nil {
+		return
+	}
 	hc.version = version
 	hash := hashForSuite(suite)
 	key := hkdfExpandLabel(hash, trafficSecret, nil, "key", suite.keyLen)
@@ -918,6 +929,9 @@ func (c *Conn) sendAlertLocked(err alert) error {
 // sendAlert sends a TLS alert message.
 // L < c.out.Mutex.
 func (c *Conn) sendAlert(err alert) error {
+	if c.config.AlternativeRecordLayer != nil {
+		return nil
+	}
 	c.out.Lock()
 	defer c.out.Unlock()
 	return c.sendAlertLocked(err)
@@ -1117,6 +1131,13 @@ func (c *Conn) writeRecordLocked(typ recordType, data []byte) (int, error) {
 // connection and updates the record layer state.
 // L < c.out.Mutex.
 func (c *Conn) writeRecord(typ recordType, data []byte) (int, error) {
+	if c.config.AlternativeRecordLayer != nil {
+		if typ == recordTypeChangeCipherSpec {
+			return len(data), nil
+		}
+		return c.config.AlternativeRecordLayer.WriteRecord(data)
+	}
+
 	c.out.Lock()
 	defer c.out.Unlock()
 
@@ -1127,30 +1148,39 @@ func (c *Conn) writeRecord(typ recordType, data []byte) (int, error) {
 // the record layer.
 // c.in.Mutex < L; c.out.Mutex < L.
 func (c *Conn) readHandshake() (interface{}, error) {
-	for c.hand.Len() < 4 {
-		if err := c.in.err; err != nil {
+	var data []byte
+	if c.config.AlternativeRecordLayer != nil {
+		var err error
+		data, err = c.config.AlternativeRecordLayer.ReadHandshakeMessage()
+		if err != nil {
 			return nil, err
 		}
-		if err := c.readRecord(recordTypeHandshake); err != nil {
-			return nil, err
+	} else {
+		for c.hand.Len() < 4 {
+			if err := c.in.err; err != nil {
+				return nil, err
+			}
+			if err := c.readRecord(recordTypeHandshake); err != nil {
+				return nil, err
+			}
 		}
-	}
 
-	data := c.hand.Bytes()
-	n := int(data[1])<<16 | int(data[2])<<8 | int(data[3])
-	if n > maxHandshake {
-		c.sendAlertLocked(alertInternalError)
-		return nil, c.in.setErrorLocked(fmt.Errorf("tls: handshake message of length %d bytes exceeds maximum of %d bytes", n, maxHandshake))
-	}
-	for c.hand.Len() < 4+n {
-		if err := c.in.err; err != nil {
-			return nil, err
+		data = c.hand.Bytes()
+		n := int(data[1])<<16 | int(data[2])<<8 | int(data[3])
+		if n > maxHandshake {
+			c.sendAlertLocked(alertInternalError)
+			return nil, c.in.setErrorLocked(fmt.Errorf("tls: handshake message of length %d bytes exceeds maximum of %d bytes", n, maxHandshake))
 		}
-		if err := c.readRecord(recordTypeHandshake); err != nil {
-			return nil, err
+		for c.hand.Len() < 4+n {
+			if err := c.in.err; err != nil {
+				return nil, err
+			}
+			if err := c.readRecord(recordTypeHandshake); err != nil {
+				return nil, err
+			}
 		}
+		data = c.hand.Next(4 + n)
 	}
-	data = c.hand.Next(4 + n)
 	var m handshakeMessage
 	switch data[0] {
 	case typeHelloRequest:
@@ -1333,6 +1363,13 @@ func (c *Conn) handleRenegotiation(*helloRequestMsg) error {
 		c.handshakes++
 	}
 	return c.handshakeErr
+}
+
+func (c *Conn) setAlternativeRecordLayer() {
+	if c.config.AlternativeRecordLayer != nil {
+		c.in.setKeyCallback = c.config.AlternativeRecordLayer.SetReadKey
+		c.out.setKeyCallback = c.config.AlternativeRecordLayer.SetWriteKey
+	}
 }
 
 // ConfirmHandshake waits for the handshake to reach a point at which
