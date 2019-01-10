@@ -1015,9 +1015,12 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 		c.sendAlert(alertUnexpectedMessage)
 		return errors.New("tls: unexpected data after Server Hello")
 	}
-	// Do not change the sender key yet, the server must authenticate first.
 	serverHandshakeSecret := hs.keySchedule.deriveSecret(secretHandshakeServer)
 	c.in.exportKey(hs.keySchedule.suite, serverHandshakeSecret)
+	// Already the sender key yet, when using an alternative record layer.
+	// QUIC needs the handshake write key in order to acknowlege Handshake packets.
+	c.out.exportKey(hs.keySchedule.suite, clientHandshakeSecret)
+	// Do not change the sender key yet, the server must authenticate first.
 	c.in.setKey(c.vers, hs.keySchedule.suite, serverHandshakeSecret)
 
 	// Calculate MAC key for Finished messages.
@@ -1138,7 +1141,6 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	hs.keySchedule.setSecret(nil) // derive master secret
 
 	// Change outbound handshake cipher for final step
-	c.out.exportKey(hs.keySchedule.suite, clientHandshakeSecret)
 	c.out.setKey(c.vers, hs.keySchedule.suite, clientHandshakeSecret)
 
 	clientAppTrafficSecret := hs.keySchedule.deriveSecret(secretApplicationClient)
