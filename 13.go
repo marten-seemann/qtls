@@ -622,6 +622,11 @@ func (c *Conn) deriveDHESecret(ks keyShare, secretKey []byte) []byte {
 	return nil
 }
 
+// HkdfExpandLabel HKDF expands a label
+func HkdfExpandLabel(hash crypto.Hash, secret, hashValue []byte, label string, L int) []byte {
+	return hkdfExpandLabel(hash, secret, hashValue, label, L)
+}
+
 func hkdfExpandLabel(hash crypto.Hash, secret, hashValue []byte, label string, L int) []byte {
 	prefix := "tls13 "
 	hkdfLabel := make([]byte, 4+len(prefix)+len(label)+len(hashValue))
