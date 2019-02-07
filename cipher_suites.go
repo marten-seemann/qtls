@@ -356,6 +356,11 @@ func aeadAESGCM(key, noncePrefix []byte) aead {
 	return ret
 }
 
+// AEADAESGCMTLS13 creates a new AES-GCM AEAD for TLS 1.3
+func AEADAESGCMTLS13(key, fixedNonce []byte) cipher.AEAD {
+	return aeadAESGCMTLS13(key, fixedNonce)
+}
+
 func aeadAESGCMTLS13(key, nonceMask []byte) aead {
 	if len(nonceMask) != aeadNonceLength {
 		panic("tls: internal error: wrong nonce length")
