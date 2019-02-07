@@ -384,20 +384,8 @@ type ClientHelloInfo struct {
 	Conn net.Conn
 }
 
-// CertificateRequestInfo contains information from a server's
-// CertificateRequest message, which is used to demand a certificate and proof
-// of control from a client.
-type CertificateRequestInfo struct {
-	// AcceptableCAs contains zero or more, DER-encoded, X.501
-	// Distinguished Names. These are the names of root or intermediate CAs
-	// that the server wishes the returned certificate to be signed by. An
-	// empty slice indicates that the server has no preference.
-	AcceptableCAs [][]byte
-
-	// SignatureSchemes lists the signature schemes that the server is
-	// willing to verify.
-	SignatureSchemes []SignatureScheme
-}
+// The CertificateRequestInfo is a tls.CertificateRequestInfo
+type CertificateRequestInfo = tls.CertificateRequestInfo
 
 // RenegotiationSupport enumerates the different levels of support for TLS
 // renegotiation. TLS renegotiation is the act of performing subsequent
