@@ -165,6 +165,10 @@ func (c *Conn) readClientHello() (*clientHelloMsg, error) {
 	c.in.version = c.vers
 	c.out.version = c.vers
 
+	if c.vers == VersionTLS13 && c.config.ReceivedExtensions != nil {
+		c.config.ReceivedExtensions(typeClientHello, clientHello.additionalExtensions)
+	}
+
 	return clientHello, nil
 }
 
