@@ -132,6 +132,10 @@ NextCipherSuite:
 		hello.keyShares = []keyShare{{group: curveID, data: params.PublicKey()}}
 	}
 
+	if hello.supportedVersions[0] == VersionTLS13 && config.GetExtensions != nil {
+		hello.additionalExtensions = config.GetExtensions(typeClientHello)
+	}
+
 	return hello, params, nil
 }
 
