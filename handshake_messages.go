@@ -92,6 +92,7 @@ type clientHelloMsg struct {
 	pskModes                         []uint8
 	pskIdentities                    []pskIdentity
 	pskBinders                       [][]byte
+	additionalExtensions             []Extension
 }
 
 func (m *clientHelloMsg) marshal() []byte {
@@ -266,6 +267,12 @@ func (m *clientHelloMsg) marshal() []byte {
 					})
 				})
 			}
+			for _, ext := range m.additionalExtensions {
+				b.AddUint16(ext.Type)
+				b.AddUint16LengthPrefixed(func(b *cryptobyte.Builder) {
+					b.AddBytes(ext.Data)
+				})
+			}
 			if len(m.pskIdentities) > 0 { // pre_shared_key must be the last extension
 				// RFC 8446, Section 4.2.11
 				b.AddUint16(extensionPreSharedKey)
@@ -386,14 +393,14 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 	}
 
 	for !extensions.Empty() {
-		var extension uint16
+		var ext uint16
 		var extData cryptobyte.String
-		if !extensions.ReadUint16(&extension) ||
+		if !extensions.ReadUint16(&ext) ||
 			!extensions.ReadUint16LengthPrefixed(&extData) {
 			return false
 		}
 
-		switch extension {
+		switch ext {
 		case extensionServerName:
 			// RFC 6066, Section 3
 			var nameList cryptobyte.String
@@ -577,7 +584,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 				m.pskBinders = append(m.pskBinders, binder)
 			}
 		default:
-			// Ignore unknown extensions.
+			m.additionalExtensions = append(m.additionalExtensions, Extension{Type: ext, Data: extData})
 			continue
 		}
 

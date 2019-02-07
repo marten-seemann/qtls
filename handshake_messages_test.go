@@ -190,6 +190,12 @@ func (*clientHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
 	if rand.Intn(10) > 5 {
 		m.earlyData = true
 	}
+	if numExt := rand.Intn(10); numExt > 0 {
+		extType := 1000 + uint16(rand.Intn(5000))
+		length := rand.Intn(50)
+		m.additionalExtensions = append(m.additionalExtensions,
+			Extension{Type: extType, Data: randomBytes(length, rand)})
+	}
 
 	return reflect.ValueOf(m)
 }
