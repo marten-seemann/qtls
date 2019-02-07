@@ -220,6 +220,17 @@ type cipherSuiteTLS13 struct {
 	hash   crypto.Hash
 }
 
+type CipherSuiteTLS13 struct {
+	ID     uint16
+	KeyLen int
+	Hash   crypto.Hash
+	AEAD   func(key, fixedNonce []byte) cipher.AEAD
+}
+
+func (c *CipherSuiteTLS13) IVLen() int {
+	return aeadNonceLength
+}
+
 var cipherSuitesTLS13 = []*cipherSuiteTLS13{
 	{TLS_AES_128_GCM_SHA256, 16, aeadAESGCMTLS13, crypto.SHA256},
 	{TLS_CHACHA20_POLY1305_SHA256, 32, aeadChaCha20Poly1305, crypto.SHA256},

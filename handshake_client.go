@@ -141,6 +141,7 @@ func (c *Conn) clientHandshake() (err error) {
 	if c.config == nil {
 		c.config = defaultConfig()
 	}
+	c.setAlternativeRecordLayer()
 
 	// This may be a renegotiation handshake, in which case some fields
 	// need to be reset.
