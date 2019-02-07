@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package tls partially implements TLS 1.2, as specified in RFC 5246,
+// package qtls partially implements TLS 1.2, as specified in RFC 5246,
 // and TLS 1.3, as specified in RFC 8446.
 //
 // TLS 1.3 is available only on an opt-in basis in Go 1.12. To enable
@@ -13,7 +13,7 @@
 //     func init() {
 //         os.Setenv("GODEBUG", os.Getenv("GODEBUG")+",tls13=1")
 //     }
-package tls
+package qtls
 
 // BUG(agl): The crypto/tls package only implements some countermeasures
 // against Lucky13 attacks on CBC-mode encryption, and only on SHA1

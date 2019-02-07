@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package tls
+package qtls
 
 import (
 	"crypto"
@@ -15,7 +15,8 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"hash"
-	"internal/x/crypto/chacha20poly1305"
+
+	"golang.org/x/crypto/chacha20poly1305"
 )
 
 // a keyAgreement implements the client and server side of a TLS key agreement
