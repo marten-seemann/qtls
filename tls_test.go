@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package tls
+package qtls
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"internal/testenv"
 	"io"
 	"io/ioutil"
 	"math"
@@ -348,8 +347,6 @@ func TestTLSUniqueMatches(t *testing.T) {
 }
 
 func TestVerifyHostname(t *testing.T) {
-	testenv.MustHaveExternalNetwork(t)
-
 	c, err := Dial("tcp", "www.google.com:https", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -376,8 +373,6 @@ func TestVerifyHostnameResumed(t *testing.T) {
 }
 
 func testVerifyHostnameResumed(t *testing.T, version uint16) {
-	testenv.MustHaveExternalNetwork(t)
-
 	config := &Config{
 		MaxVersion:         version,
 		ClientSessionCache: NewLRUClientSessionCache(32),

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package tls
+package qtls
 
 import (
 	"bytes"
@@ -12,8 +12,9 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
-	"internal/x/crypto/cryptobyte"
 	"io"
+
+	"golang.org/x/crypto/cryptobyte"
 )
 
 // sessionState contains the information that is serialized into a session

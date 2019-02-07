@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package tls
+package qtls
 
 import (
 	"crypto/elliptic"
 	"crypto/hmac"
 	"errors"
 	"hash"
-	"internal/x/crypto/cryptobyte"
-	"internal/x/crypto/curve25519"
-	"internal/x/crypto/hkdf"
 	"io"
 	"math/big"
+
+	"golang.org/x/crypto/cryptobyte"
+	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/hkdf"
 )
 
 // This file contains the functions necessary to compute the TLS 1.3 key
