@@ -60,6 +60,15 @@ const (
 	suiteDefaultOff
 )
 
+type CipherSuite struct {
+	*cipherSuiteTLS13
+}
+
+func (c *CipherSuite) Hash() crypto.Hash                       { return c.hash }
+func (c *CipherSuite) KeyLen() int                             { return c.keyLen }
+func (c *CipherSuite) IVLen() int                              { return aeadNonceLength }
+func (c *CipherSuite) AEAD(key, fixedNonce []byte) cipher.AEAD { return c.aead(key, fixedNonce) }
+
 // A cipherSuite is a specific combination of key agreement, cipher and MAC function.
 type cipherSuite struct {
 	id uint16
