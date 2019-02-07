@@ -5,6 +5,7 @@
 package qtls
 
 import (
+	"crypto"
 	"crypto/elliptic"
 	"crypto/hmac"
 	"errors"
@@ -30,6 +31,14 @@ const (
 	resumptionLabel               = "res master"
 	trafficUpdateLabel            = "traffic upd"
 )
+
+// HkdfExtract generates a pseudorandom key for use with Expand from an input secret and an optional independent salt.
+func HkdfExtract(hash crypto.Hash, newSecret, currentSecret []byte) []byte {
+	if newSecret == nil {
+		newSecret = make([]byte, hash.Size())
+	}
+	return hkdf.Extract(hash.New, newSecret, currentSecret)
+}
 
 // expandLabel implements HKDF-Expand-Label from RFC 8446, Section 7.1.
 func (c *cipherSuiteTLS13) expandLabel(secret []byte, label string, context []byte, length int) []byte {
@@ -60,10 +69,7 @@ func (c *cipherSuiteTLS13) deriveSecret(secret []byte, label string, transcript 
 
 // extract implements HKDF-Extract with the cipher suite hash.
 func (c *cipherSuiteTLS13) extract(newSecret, currentSecret []byte) []byte {
-	if newSecret == nil {
-		newSecret = make([]byte, c.hash.Size())
-	}
-	return hkdf.Extract(c.hash.New, newSecret, currentSecret)
+	return HkdfExtract(c.hash, newSecret, currentSecret)
 }
 
 // nextTrafficSecret generates the next traffic secret, given the current one,
