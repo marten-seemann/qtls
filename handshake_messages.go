@@ -842,6 +842,8 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 type encryptedExtensionsMsg struct {
 	raw          []byte
 	alpnProtocol string
+
+	additionalExtensions []Extension
 }
 
 func (m *encryptedExtensionsMsg) marshal() []byte {
@@ -863,6 +865,12 @@ func (m *encryptedExtensionsMsg) marshal() []byte {
 					})
 				})
 			}
+			for _, ext := range m.additionalExtensions {
+				b.AddUint16(ext.Type)
+				b.AddUint16LengthPrefixed(func(b *cryptobyte.Builder) {
+					b.AddBytes(ext.Data)
+				})
+			}
 		})
 	})
 
@@ -881,14 +889,14 @@ func (m *encryptedExtensionsMsg) unmarshal(data []byte) bool {
 	}
 
 	for !extensions.Empty() {
-		var extension uint16
+		var ext uint16
 		var extData cryptobyte.String
-		if !extensions.ReadUint16(&extension) ||
+		if !extensions.ReadUint16(&ext) ||
 			!extensions.ReadUint16LengthPrefixed(&extData) {
 			return false
 		}
 
-		switch extension {
+		switch ext {
 		case extensionALPN:
 			var protoList cryptobyte.String
 			if !extData.ReadUint16LengthPrefixed(&protoList) || protoList.Empty() {
@@ -901,7 +909,7 @@ func (m *encryptedExtensionsMsg) unmarshal(data []byte) bool {
 			}
 			m.alpnProtocol = string(proto)
 		default:
-			// Ignore unknown extensions.
+			m.additionalExtensions = append(m.additionalExtensions, Extension{Type: ext, Data: extData})
 			continue
 		}
 

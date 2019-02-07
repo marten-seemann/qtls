@@ -250,6 +250,15 @@ func (*encryptedExtensionsMsg) Generate(rand *rand.Rand, size int) reflect.Value
 		m.alpnProtocol = randomString(rand.Intn(32)+1, rand)
 	}
 
+	if numExt := rand.Intn(4); numExt > 0 {
+		for i := 0; i < numExt; i++ {
+			extType := 1000 + uint16(rand.Intn(5000))
+			length := rand.Intn(50)
+			m.additionalExtensions = append(m.additionalExtensions,
+				Extension{Type: extType, Data: randomBytes(length, rand)})
+		}
+	}
+
 	return reflect.ValueOf(m)
 }
 
