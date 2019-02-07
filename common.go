@@ -558,6 +558,16 @@ type Config struct {
 	// for new tickets and any subsequent keys can be used to decrypt old
 	// tickets.
 	sessionTicketKeys []ticketKey
+
+	// AlternativeRecordLayer is used by QUIC
+	AlternativeRecordLayer RecordLayer
+}
+
+type RecordLayer interface {
+	SetReadKey(suite *CipherSuite, trafficSecret []byte)
+	SetWriteKey(suite *CipherSuite, trafficSecret []byte)
+	ReadHandshakeMessage() ([]byte, error)
+	WriteRecord([]byte) (int, error)
 }
 
 // ticketKeyNameLen is the number of bytes of identifier that is prepended to

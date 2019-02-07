@@ -38,6 +38,7 @@ func (c *Conn) serverHandshake() error {
 	// If this is the first server handshake, we generate a random key to
 	// encrypt the tickets with.
 	c.config.serverInitOnce.Do(func() { c.config.serverInit(nil) })
+	c.setAlternativeRecordLayer()
 
 	clientHello, err := c.readClientHello()
 	if err != nil {
