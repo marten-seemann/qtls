@@ -346,9 +346,11 @@ func (hs *clientHandshakeStateTLS13) establishHandshakeKeys() error {
 
 	clientSecret := hs.suite.deriveSecret(handshakeSecret,
 		clientHandshakeTrafficLabel, hs.transcript)
+	c.out.exportKey(EncryptionHandshake, hs.suite, clientSecret)
 	c.out.setTrafficSecret(hs.suite, clientSecret)
 	serverSecret := hs.suite.deriveSecret(handshakeSecret,
 		serverHandshakeTrafficLabel, hs.transcript)
+	c.in.exportKey(EncryptionHandshake, hs.suite, serverSecret)
 	c.in.setTrafficSecret(hs.suite, serverSecret)
 
 	err := c.config.writeKeyLog(keyLogLabelClientHandshake, hs.hello.random, clientSecret)
@@ -505,6 +507,7 @@ func (hs *clientHandshakeStateTLS13) readServerFinished() error {
 		clientApplicationTrafficLabel, hs.transcript)
 	serverSecret := hs.suite.deriveSecret(hs.masterSecret,
 		serverApplicationTrafficLabel, hs.transcript)
+	c.in.exportKey(EncryptionApplication, hs.suite, serverSecret)
 	c.in.setTrafficSecret(hs.suite, serverSecret)
 
 	err = c.config.writeKeyLog(keyLogLabelClientTraffic, hs.hello.random, hs.trafficSecret)
@@ -615,6 +618,7 @@ func (hs *clientHandshakeStateTLS13) sendClientFinished() error {
 		return err
 	}
 
+	c.out.exportKey(EncryptionApplication, hs.suite, hs.trafficSecret)
 	c.out.setTrafficSecret(hs.suite, hs.trafficSecret)
 
 	if !c.config.SessionTicketsDisabled && c.config.ClientSessionCache != nil {
