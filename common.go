@@ -228,9 +228,8 @@ func (cs *ConnectionState) ExportKeyingMaterial(label string, context []byte, le
 	return cs.ekm(label, context, length)
 }
 
-// ClientAuthType declares the policy the server will follow for
-// TLS Client Authentication.
-type ClientAuthType int
+// ClientAuthType is tls.ClientAuthType
+type ClientAuthType = tls.ClientAuthType
 
 const (
 	NoClientCert ClientAuthType = iota
