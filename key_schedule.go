@@ -40,8 +40,12 @@ func HkdfExtract(hash crypto.Hash, newSecret, currentSecret []byte) []byte {
 	return hkdf.Extract(hash.New, newSecret, currentSecret)
 }
 
-// expandLabel implements HKDF-Expand-Label from RFC 8446, Section 7.1.
-func (c *cipherSuiteTLS13) expandLabel(secret []byte, label string, context []byte, length int) []byte {
+// HkdfExpandLabel HKDF expands a label
+func HkdfExpandLabel(hash crypto.Hash, secret, hashValue []byte, label string, L int) []byte {
+	return hkdfExpandLabel(hash, secret, hashValue, label, L)
+}
+
+func hkdfExpandLabel(hash crypto.Hash, secret, context []byte, label string, length int) []byte {
 	var hkdfLabel cryptobyte.Builder
 	hkdfLabel.AddUint16(uint16(length))
 	hkdfLabel.AddUint8LengthPrefixed(func(b *cryptobyte.Builder) {
@@ -52,11 +56,16 @@ func (c *cipherSuiteTLS13) expandLabel(secret []byte, label string, context []by
 		b.AddBytes(context)
 	})
 	out := make([]byte, length)
-	n, err := hkdf.Expand(c.hash.New, secret, hkdfLabel.BytesOrPanic()).Read(out)
+	n, err := hkdf.Expand(hash.New, secret, hkdfLabel.BytesOrPanic()).Read(out)
 	if err != nil || n != length {
 		panic("tls: HKDF-Expand-Label invocation failed unexpectedly")
 	}
 	return out
+}
+
+// expandLabel implements HKDF-Expand-Label from RFC 8446, Section 7.1.
+func (c *cipherSuiteTLS13) expandLabel(secret []byte, label string, context []byte, length int) []byte {
+	return hkdfExpandLabel(c.hash, secret, context, label, length)
 }
 
 // deriveSecret implements Derive-Secret from RFC 8446, Section 7.1.
