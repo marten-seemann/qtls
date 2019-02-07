@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"net"
 	"os"
 	"strings"
 	"sync"
@@ -311,52 +310,8 @@ const (
 	ECDSAWithSHA1 SignatureScheme = 0x0203
 )
 
-// ClientHelloInfo contains information from a ClientHello message in order to
-// guide certificate selection in the GetCertificate callback.
-type ClientHelloInfo struct {
-	// CipherSuites lists the CipherSuites supported by the client (e.g.
-	// TLS_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256).
-	CipherSuites []uint16
-
-	// ServerName indicates the name of the server requested by the client
-	// in order to support virtual hosting. ServerName is only set if the
-	// client is using SNI (see RFC 4366, Section 3.1).
-	ServerName string
-
-	// SupportedCurves lists the elliptic curves supported by the client.
-	// SupportedCurves is set only if the Supported Elliptic Curves
-	// Extension is being used (see RFC 4492, Section 5.1.1).
-	SupportedCurves []CurveID
-
-	// SupportedPoints lists the point formats supported by the client.
-	// SupportedPoints is set only if the Supported Point Formats Extension
-	// is being used (see RFC 4492, Section 5.1.2).
-	SupportedPoints []uint8
-
-	// SignatureSchemes lists the signature and hash schemes that the client
-	// is willing to verify. SignatureSchemes is set only if the Signature
-	// Algorithms Extension is being used (see RFC 5246, Section 7.4.1.4.1).
-	SignatureSchemes []SignatureScheme
-
-	// SupportedProtos lists the application protocols supported by the client.
-	// SupportedProtos is set only if the Application-Layer Protocol
-	// Negotiation Extension is being used (see RFC 7301, Section 3.1).
-	//
-	// Servers can select a protocol by setting Config.NextProtos in a
-	// GetConfigForClient return value.
-	SupportedProtos []string
-
-	// SupportedVersions lists the TLS versions supported by the client.
-	// For TLS versions less than 1.3, this is extrapolated from the max
-	// version advertised by the client, so values other than the greatest
-	// might be rejected if used.
-	SupportedVersions []uint16
-
-	// Conn is the underlying net.Conn for the connection. Do not read
-	// from, or write to, this connection; that will cause the TLS
-	// connection to fail.
-	Conn net.Conn
-}
+// A ClientHelloInfo is a tls.ClientHelloInfo
+type ClientHelloInfo = tls.ClientHelloInfo
 
 // The CertificateRequestInfo is a tls.CertificateRequestInfo
 type CertificateRequestInfo = tls.CertificateRequestInfo
