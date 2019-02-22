@@ -798,6 +798,7 @@ var tls13Support struct {
 // isTLS13Supported returns whether the program opted into TLS 1.3 via
 // GODEBUG=tls13=1. It's cached after the first execution.
 func isTLS13Supported() bool {
+	return true
 	tls13Support.Do(func() {
 		tls13Support.cached = goDebugString("tls13") == "1"
 	})
