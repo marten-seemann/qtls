@@ -10,6 +10,7 @@ import (
 	"crypto/hmac"
 	"crypto/rsa"
 	"errors"
+	"fmt"
 	"hash"
 	"io"
 	"sync/atomic"
@@ -575,6 +576,10 @@ func (hs *serverHandshakeStateTLS13) sendServerParameters() error {
 			encryptedExtensions.alpnProtocol = selectedProto
 			c.clientProtocol = selectedProto
 		}
+	}
+	if c.config.EnforceNextProtoSelection && len(c.clientProtocol) == 0 {
+		c.sendAlert(alertNoApplicationProtocol)
+		return fmt.Errorf("ALPN negotiation failed. Client offered: %q", hs.clientHello.alpnProtocols)
 	}
 	if hs.c.config.GetExtensions != nil {
 		encryptedExtensions.additionalExtensions = hs.c.config.GetExtensions(typeEncryptedExtensions)
