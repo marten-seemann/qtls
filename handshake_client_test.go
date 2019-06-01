@@ -1190,6 +1190,30 @@ func TestHandshakeClientALPNMatch(t *testing.T) {
 	runClientTestTLS13(t, test)
 }
 
+func TestHandshakeClientEnforceALPNMatch(t *testing.T) {
+	clientConn, serverConn := localPipe(t)
+	server := Server(serverConn, testConfig)
+
+	sErrChan := make(chan error)
+	go func() {
+		sErrChan <- server.Handshake()
+	}()
+
+	config := testConfig.Clone()
+	config.NextProtos = []string{"proto2", "proto1"}
+	config.EnforceNextProtoSelection = true
+
+	client := Client(clientConn, config)
+	err := client.Handshake()
+	if err == nil || err.Error() != "ALPN negotiation failed" {
+		t.Fatalf("Expected APLN negotiation to fail, got %s", err)
+	}
+	sErr := <-sErrChan
+	if sErr == nil || !strings.Contains(sErr.Error(), "no application protocol") {
+		t.Fatalf("Expect 'no_application_protocol' error, got %s", sErr)
+	}
+}
+
 // sctsBase64 contains data from `openssl s_client -serverinfo 18 -connect ritter.vg:443`
 const sctsBase64 = "ABIBaQFnAHUApLkJkLQYWBSHuxOizGdwCjw1mAT5G9+443fNDsgN3BAAAAFHl5nuFgAABAMARjBEAiAcS4JdlW5nW9sElUv2zvQyPoZ6ejKrGGB03gjaBZFMLwIgc1Qbbn+hsH0RvObzhS+XZhr3iuQQJY8S9G85D9KeGPAAdgBo9pj4H2SCvjqM7rkoHUz8cVFdZ5PURNEKZ6y7T0/7xAAAAUeX4bVwAAAEAwBHMEUCIDIhFDgG2HIuADBkGuLobU5a4dlCHoJLliWJ1SYT05z6AiEAjxIoZFFPRNWMGGIjskOTMwXzQ1Wh2e7NxXE1kd1J0QsAdgDuS723dc5guuFCaR+r4Z5mow9+X7By2IMAxHuJeqj9ywAAAUhcZIqHAAAEAwBHMEUCICmJ1rBT09LpkbzxtUC+Hi7nXLR0J+2PmwLp+sJMuqK+AiEAr0NkUnEVKVhAkccIFpYDqHOlZaBsuEhWWrYpg2RtKp0="
 
