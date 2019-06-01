@@ -594,6 +594,12 @@ type Config struct {
 
 	// AlternativeRecordLayer is used by QUIC
 	AlternativeRecordLayer RecordLayer
+
+	// Enforce the selection of a supported application protocol.
+	// Only works for TLS 1.3.
+	// If enabled, client and server have to agree on an application protocol.
+	// Otherwise, connection establishment fails.
+	EnforceNextProtoSelection bool
 }
 
 type RecordLayer interface {
@@ -673,6 +679,7 @@ func (c *Config) Clone() *Config {
 		GetExtensions:               c.GetExtensions,
 		ReceivedExtensions:          c.ReceivedExtensions,
 		sessionTicketKeys:           sessionTicketKeys,
+		EnforceNextProtoSelection:   c.EnforceNextProtoSelection,
 	}
 }
 
