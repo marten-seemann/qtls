@@ -309,6 +309,11 @@ func (hs *serverHandshakeStateTLS13) checkForResumption() error {
 			return err
 		}
 
+		h := cloneHash(hs.transcript, hs.suite.hash)
+		h.Write(hs.clientHello.marshal())
+		clientEarlySecret := hs.suite.deriveSecret(hs.earlySecret, "c e traffic", h)
+		c.in.exportKey(Encryption0RTT, hs.suite, clientEarlySecret)
+
 		hs.hello.selectedIdentityPresent = true
 		hs.hello.selectedIdentity = uint16(i)
 		hs.usingPSK = true

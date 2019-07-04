@@ -111,6 +111,7 @@ type EncryptionLevel uint8
 
 const (
 	EncryptionHandshake EncryptionLevel = iota
+	Encryption0RTT
 	EncryptionApplication
 )
 
@@ -577,6 +578,7 @@ type Config struct {
 
 	// If MaxEarlyData is greater than 0, the client will be allowed to send early
 	// data when resuming a session.
+	// Requires the AlternativeRecordLayer to be set.
 	//
 	// It has no meaning on the client.
 	MaxEarlyData uint32
