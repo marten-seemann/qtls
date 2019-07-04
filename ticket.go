@@ -250,5 +250,6 @@ func (c *Conn) GetSessionTicket() ([]byte, error) {
 		return nil, err
 	}
 	m.lifetime = uint32(maxSessionTicketLifetime / time.Second)
+	m.maxEarlyData = c.config.MaxEarlyData
 	return m.marshal(), nil
 }
