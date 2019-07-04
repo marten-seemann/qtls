@@ -340,6 +340,7 @@ func (*sessionStateTLS13) Generate(rand *rand.Rand, size int) reflect.Value {
 	s.cipherSuite = uint16(rand.Intn(10000))
 	s.resumptionSecret = randomBytes(rand.Intn(100)+1, rand)
 	s.createdAt = uint64(rand.Int63())
+	s.maxEarlyData = uint32(rand.Int31())
 	for i := 0; i < rand.Intn(2)+1; i++ {
 		s.certificate.Certificate = append(
 			s.certificate.Certificate, randomBytes(rand.Intn(500)+1, rand))
