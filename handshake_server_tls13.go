@@ -770,6 +770,7 @@ func (hs *serverHandshakeStateTLS13) sendSessionTickets() error {
 			OCSPStaple:                  c.ocspResponse,
 			SignedCertificateTimestamps: c.scts,
 		},
+		maxEarlyData: c.config.MaxEarlyData,
 	}
 	var err error
 	m.label, err = c.encryptTicket(state.marshal())
