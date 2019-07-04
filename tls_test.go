@@ -749,6 +749,8 @@ func TestCloneNonFuncFields(t *testing.T) {
 			f.Set(reflect.ValueOf([]CurveID{CurveP256}))
 		case "Renegotiation":
 			f.Set(reflect.ValueOf(RenegotiateOnceAsClient))
+		case "MaxEarlyData":
+			f.Set(reflect.ValueOf(uint32(1337)))
 		case "AlternativeRecordLayer":
 		default:
 			t.Errorf("all fields must be accounted for, but saw unknown field %q", fn)

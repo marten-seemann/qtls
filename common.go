@@ -574,6 +574,12 @@ type Config struct {
 	// If enabled, client and server have to agree on an application protocol.
 	// Otherwise, connection establishment fails.
 	EnforceNextProtoSelection bool
+
+	// If MaxEarlyData is greater than 0, the client will be allowed to send early
+	// data when resuming a session.
+	//
+	// It has no meaning on the client.
+	MaxEarlyData uint32
 }
 
 type RecordLayer interface {
@@ -654,6 +660,7 @@ func (c *Config) Clone() *Config {
 		ReceivedExtensions:          c.ReceivedExtensions,
 		sessionTicketKeys:           sessionTicketKeys,
 		EnforceNextProtoSelection:   c.EnforceNextProtoSelection,
+		MaxEarlyData:                c.MaxEarlyData,
 	}
 }
 
