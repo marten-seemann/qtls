@@ -134,17 +134,6 @@ func (hs *serverHandshakeStateTLS13) processClientHello() error {
 		return errors.New("tls: initial handshake had non-empty renegotiation extension")
 	}
 
-	if hs.clientHello.earlyData {
-		// See RFC 8446, Section 4.2.10 for the complicated behavior required
-		// here. The scenario is that a different server at our address offered
-		// to accept early data in the past, which we can't handle. For now, all
-		// 0-RTT enabled session tickets need to expire before a Go server can
-		// replace a server or join a pool. That's the same requirement that
-		// applies to mixing or replacing with any TLS 1.2 server.
-		c.sendAlert(alertUnsupportedExtension)
-		return errors.New("tls: client sent unexpected early data")
-	}
-
 	hs.hello.sessionId = hs.clientHello.sessionId
 	hs.hello.compressionMethod = compressionNone
 
@@ -277,6 +266,11 @@ func (hs *serverHandshakeStateTLS13) checkForResumption() error {
 		sessionState := new(sessionStateTLS13)
 		if ok := sessionState.unmarshal(plaintext); !ok {
 			continue
+		}
+
+		if hs.clientHello.earlyData && sessionState.maxEarlyData == 0 {
+			c.sendAlert(alertUnsupportedExtension)
+			return errors.New("tls: client sent unexpected early data")
 		}
 
 		createdAt := time.Unix(int64(sessionState.createdAt), 0)
