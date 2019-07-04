@@ -770,6 +770,7 @@ func (hs *serverHandshakeStateTLS13) sendSessionTickets() error {
 			OCSPStaple:                  c.ocspResponse,
 			SignedCertificateTimestamps: c.scts,
 		},
+		maxEarlyData: c.config.MaxEarlyData,
 	}
 	var err error
 	m.label, err = c.encryptTicket(state.marshal())
@@ -777,6 +778,7 @@ func (hs *serverHandshakeStateTLS13) sendSessionTickets() error {
 		return err
 	}
 	m.lifetime = uint32(maxSessionTicketLifetime / time.Second)
+	m.maxEarlyData = c.config.MaxEarlyData
 
 	if _, err := c.writeRecord(recordTypeHandshake, m.marshal()); err != nil {
 		return err
