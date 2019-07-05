@@ -12,6 +12,7 @@ import (
 	"crypto/rsa"
 	"crypto/subtle"
 	"crypto/x509"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -292,6 +293,15 @@ func (c *Conn) loadSession(hello *clientHelloMsg) (cacheKey string,
 		hello.sessionTicket = session.sessionTicket
 		return
 	}
+
+	// In TLS 1.3, we abuse the nonce field to save the max_early_data_size.
+	// See Conn.handleNewSessionTicket for an explanation of this hack.
+	if len(session.nonce) < 4 {
+		return cacheKey, nil, nil, nil
+	}
+	maxEarlyData := binary.BigEndian.Uint32(session.nonce[:4])
+	_ = maxEarlyData
+	session.nonce = session.nonce[4:]
 
 	// Check that the session ticket is not expired.
 	if c.config.time().After(session.useBy) {
