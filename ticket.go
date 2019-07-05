@@ -119,6 +119,8 @@ type sessionStateTLS13 struct {
 	resumptionSecret []byte      // opaque resumption_master_secret<1..2^8-1>;
 	certificate      Certificate // CertificateEntry certificate_list<0..2^24-1>;
 	maxEarlyData     uint32
+
+	appData []byte
 }
 
 func (m *sessionStateTLS13) marshal() []byte {
@@ -132,6 +134,9 @@ func (m *sessionStateTLS13) marshal() []byte {
 	})
 	marshalCertificate(&b, m.certificate)
 	b.AddUint32(m.maxEarlyData)
+	b.AddUint16LengthPrefixed(func(b *cryptobyte.Builder) {
+		b.AddBytes(m.appData)
+	})
 	return b.BytesOrPanic()
 }
 
@@ -150,6 +155,7 @@ func (m *sessionStateTLS13) unmarshal(data []byte) bool {
 		len(m.resumptionSecret) != 0 &&
 		unmarshalCertificate(&s, &m.certificate) &&
 		s.ReadUint32(&m.maxEarlyData) &&
+		readUint16LengthPrefixed(&s, &m.appData) &&
 		s.Empty()
 }
 
@@ -224,7 +230,7 @@ func (c *Conn) decryptTicket(encrypted []byte) (plaintext []byte, usedOldKey boo
 // It can only be used for servers, and only if the alternative record layer is set.
 // The ticket may be nil if config.SessionTicketsDisabled is set,
 // or if the client isn't able to receive session tickets.
-func (c *Conn) GetSessionTicket() ([]byte, error) {
+func (c *Conn) GetSessionTicket(appData []byte) ([]byte, error) {
 	if c.isClient || !c.handshakeComplete() || c.config.AlternativeRecordLayer == nil {
 		return nil, errors.New("GetSessionTicket is only valid for servers after completion of the handshake, and if an alternative record layer is set.")
 	}
@@ -248,6 +254,7 @@ func (c *Conn) GetSessionTicket() ([]byte, error) {
 			SignedCertificateTimestamps: c.scts,
 		},
 		maxEarlyData: c.config.MaxEarlyData,
+		appData:      appData,
 	}
 	var err error
 	m.label, err = c.encryptTicket(state.marshal())
