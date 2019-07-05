@@ -769,7 +769,7 @@ func (hs *serverHandshakeStateTLS13) sendSessionTickets() error {
 		return nil
 	}
 
-	m, err := hs.c.getSessionTicketMsg()
+	m, err := hs.c.getSessionTicketMsg(nil)
 	if err != nil {
 		return err
 	}
