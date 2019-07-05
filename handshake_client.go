@@ -157,6 +157,14 @@ func (c *Conn) clientHandshake() (err error) {
 
 	cacheKey, session, earlySecret, binderKey := c.loadSession(hello)
 	if cacheKey != "" && session != nil {
+		if session.vers == VersionTLS13 && hello.earlyData && c.config.Enable0RTT {
+			if suite := cipherSuiteTLS13ByID(session.cipherSuite); suite != nil {
+				h := suite.hash.New()
+				h.Write(hello.marshal())
+				clientEarlySecret := suite.deriveSecret(earlySecret, "c e traffic", h)
+				c.out.exportKey(Encryption0RTT, suite, clientEarlySecret)
+			}
+		}
 		defer func() {
 			// If we got a handshake failure when resuming a session, throw away
 			// the session ticket. See RFC 5077, Section 3.2.
@@ -340,6 +348,7 @@ func (c *Conn) loadSession(hello *clientHelloMsg) (cacheKey string,
 		session.nonce, cipherSuite.hash.Size())
 	earlySecret = cipherSuite.extract(psk, nil)
 	binderKey = cipherSuite.deriveSecret(earlySecret, resumptionBinderLabel, nil)
+	hello.earlyData = c.config.Enable0RTT && maxEarlyData > 0
 	transcript := cipherSuite.hash.New()
 	transcript.Write(hello.marshalWithoutBinders())
 	pskBinders := [][]byte{cipherSuite.finishedHash(binderKey, transcript)}
