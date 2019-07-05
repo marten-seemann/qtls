@@ -667,6 +667,13 @@ type Config struct {
 	//
 	// It has no meaning on the client.
 	MaxEarlyData uint32
+
+	// If set, the client will export the 0-RTT key when resuming a session that
+	// allows sending of early data.
+	// Requires the AlternativeRecordLayer to be set.
+	//
+	// It has no meaning to the server.
+	Enable0RTT bool
 }
 
 // A RecordLayer handles encrypting and decrypting of TLS messages.
@@ -749,6 +756,7 @@ func (c *Config) Clone() *Config {
 		sessionTicketKeys:           sessionTicketKeys,
 		EnforceNextProtoSelection:   c.EnforceNextProtoSelection,
 		MaxEarlyData:                c.MaxEarlyData,
+		Enable0RTT:                  c.Enable0RTT,
 	}
 }
 
