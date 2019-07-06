@@ -14,20 +14,26 @@ type exportedKey struct {
 	trafficSecret []byte
 }
 
-type recordLayer struct {
+func compareExportedKeys(t *testing.T, k1, k2 *exportedKey) {
+	if k1.encLevel != k2.encLevel || k1.suite.ID != k2.suite.ID || !bytes.Equal(k1.trafficSecret, k2.trafficSecret) {
+		t.Fatal("mismatching keys")
+	}
+}
+
+type recordLayerWithKeys struct {
 	in  <-chan []byte
 	out chan<- interface{}
 }
 
-func (r *recordLayer) SetReadKey(encLevel EncryptionLevel, suite *CipherSuiteTLS13, trafficSecret []byte) {
+func (r *recordLayerWithKeys) SetReadKey(encLevel EncryptionLevel, suite *CipherSuiteTLS13, trafficSecret []byte) {
 	r.out <- &exportedKey{typ: "read", encLevel: encLevel, suite: suite, trafficSecret: trafficSecret}
 }
-func (r *recordLayer) SetWriteKey(encLevel EncryptionLevel, suite *CipherSuiteTLS13, trafficSecret []byte) {
+func (r *recordLayerWithKeys) SetWriteKey(encLevel EncryptionLevel, suite *CipherSuiteTLS13, trafficSecret []byte) {
 	r.out <- &exportedKey{typ: "write", encLevel: encLevel, suite: suite, trafficSecret: trafficSecret}
 }
-func (r *recordLayer) ReadHandshakeMessage() ([]byte, error) { return <-r.in, nil }
-func (r *recordLayer) WriteRecord(b []byte) (int, error)     { r.out <- b; return len(b), nil }
-func (r *recordLayer) SendAlert(uint8)                       {}
+func (r *recordLayerWithKeys) ReadHandshakeMessage() ([]byte, error) { return <-r.in, nil }
+func (r *recordLayerWithKeys) WriteRecord(b []byte) (int, error)     { r.out <- b; return len(b), nil }
+func (r *recordLayerWithKeys) SendAlert(uint8)                       {}
 
 type unusedConn struct {
 	remoteAddr net.Addr
@@ -83,14 +89,14 @@ func TestAlternativeRecordLayer(t *testing.T) {
 	errChan := make(chan error)
 	go func() {
 		config := testConfig.Clone()
-		config.AlternativeRecordLayer = &recordLayer{in: sIn, out: sOut}
+		config.AlternativeRecordLayer = &recordLayerWithKeys{in: sIn, out: sOut}
 		tlsConn := Server(&unusedConn{}, config)
 		defer tlsConn.Close()
 		errChan <- tlsConn.Handshake()
 	}()
 
 	config := testConfig.Clone()
-	config.AlternativeRecordLayer = &recordLayer{in: cIn, out: cOut}
+	config.AlternativeRecordLayer = &recordLayerWithKeys{in: cIn, out: cOut}
 	tlsConn := Client(&unusedConn{}, config)
 	defer tlsConn.Close()
 	if err := tlsConn.Handshake(); err != nil {
@@ -141,12 +147,6 @@ func TestAlternativeRecordLayer(t *testing.T) {
 		t.Fatal("didn't expect any more client events")
 	}
 
-	compareKeys := func(k1, k2 *exportedKey) {
-		if k1.encLevel != k2.encLevel || k1.suite.ID != k2.suite.ID || !bytes.Equal(k1.trafficSecret, k2.trafficSecret) {
-			t.Fatal("mismatching keys")
-		}
-	}
-
 	for i := 0; i <= 8; i++ {
 		ev := <-serverEvents
 		switch i {
@@ -159,13 +159,13 @@ func TestAlternativeRecordLayer(t *testing.T) {
 			if keyEv.typ != "read" || keyEv.encLevel != EncryptionHandshake {
 				t.Fatalf("expected the handshake read key")
 			}
-			compareKeys(clientHandshakeWriteKey, keyEv)
+			compareExportedKeys(t, clientHandshakeWriteKey, keyEv)
 		case 2:
 			keyEv := ev.(*exportedKey)
 			if keyEv.typ != "write" || keyEv.encLevel != EncryptionHandshake {
 				t.Fatalf("expected the handshake write key")
 			}
-			compareKeys(clientHandshakeReadKey, keyEv)
+			compareExportedKeys(t, clientHandshakeReadKey, keyEv)
 		case 3:
 			if ev.([]byte)[0] != typeEncryptedExtensions {
 				t.Fatalf("expected EncryptedExtensions")
@@ -187,13 +187,13 @@ func TestAlternativeRecordLayer(t *testing.T) {
 			if keyEv.typ != "write" || keyEv.encLevel != EncryptionApplication {
 				t.Fatalf("expected the application write key")
 			}
-			compareKeys(clientApplicationReadKey, keyEv)
+			compareExportedKeys(t, clientApplicationReadKey, keyEv)
 		case 8:
 			keyEv := ev.(*exportedKey)
 			if keyEv.typ != "read" || keyEv.encLevel != EncryptionApplication {
 				t.Fatalf("expected the application read key")
 			}
-			compareKeys(clientApplicationWriteKey, keyEv)
+			compareExportedKeys(t, clientApplicationWriteKey, keyEv)
 		}
 	}
 	if len(serverEvents) > 0 {
@@ -275,13 +275,13 @@ func TestForbiddenZeroRTT(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		clientConfig.AlternativeRecordLayer = &recordLayer{in: cIn, out: cOut}
+		clientConfig.AlternativeRecordLayer = &recordLayerWithKeys{in: cIn, out: cOut}
 		Client(&unusedConn{remoteAddr: clientConn.RemoteAddr()}, clientConfig).Handshake()
 	}()
 
 	config := testConfig.Clone()
 	config.MinVersion = VersionTLS13
-	config.AlternativeRecordLayer = &recordLayer{in: sIn, out: sOut}
+	config.AlternativeRecordLayer = &recordLayerWithKeys{in: sIn, out: sOut}
 	tlsConn = Server(&unusedConn{}, config)
 	err := tlsConn.Handshake()
 	if err == nil {
@@ -292,4 +292,207 @@ func TestForbiddenZeroRTT(t *testing.T) {
 	}
 	cIn <- []byte{0} // make the client handshake error
 	<-done
+}
+
+func TestZeroRTTKeys(t *testing.T) {
+	// run the first handshake to get a session ticket
+	clientConn, serverConn := localPipe(t)
+	errChan := make(chan error, 1)
+	go func() {
+		config := testConfig.Clone()
+		config.MaxEarlyData = 1000
+		tlsConn := Server(serverConn, config)
+		defer tlsConn.Close()
+		err := tlsConn.Handshake()
+		errChan <- err
+		if err != nil {
+			return
+		}
+		tlsConn.Write([]byte{0})
+	}()
+
+	clientConfig := testConfig.Clone()
+	clientConfig.ClientSessionCache = NewLRUClientSessionCache(10)
+	tlsConn := Client(clientConn, clientConfig)
+	if err := tlsConn.Handshake(); err != nil {
+		t.Fatalf("first handshake failed: %s", err)
+	}
+	tlsConn.Read([]byte{0}) // make sure to read the session ticket
+	tlsConn.Close()
+	if err := <-errChan; err != nil {
+		t.Fatalf("first handshake failed: %s", err)
+	}
+
+	sIn := make(chan []byte, 10)
+	sOut := make(chan interface{}, 10)
+	defer close(sOut)
+	cIn := make(chan []byte, 10)
+	cOut := make(chan interface{}, 10)
+	defer close(cOut)
+
+	var serverEarlyData bool
+	var serverExportedKey *exportedKey
+	go func() {
+		for {
+			c, ok := <-sOut
+			if !ok {
+				return
+			}
+			if b, ok := c.([]byte); ok {
+				if b[0] == typeEncryptedExtensions {
+					var msg encryptedExtensionsMsg
+					if ok := msg.unmarshal(b); !ok {
+						panic("failed to unmarshal EncryptedExtensions")
+					}
+					serverEarlyData = msg.earlyData
+				}
+				cIn <- b
+			}
+			if k, ok := c.(*exportedKey); ok && k.encLevel == Encryption0RTT {
+				serverExportedKey = k
+			}
+		}
+	}()
+
+	var clientEarlyData bool
+	var clientExportedKey *exportedKey
+	go func() {
+		for {
+			c, ok := <-cOut
+			if !ok {
+				return
+			}
+			if b, ok := c.([]byte); ok {
+				if b[0] == typeClientHello {
+					var msg clientHelloMsg
+					if ok := msg.unmarshal(b); !ok {
+						panic("failed to unmarshal ClientHello")
+					}
+					clientEarlyData = msg.earlyData
+				}
+				sIn <- b
+			}
+			if k, ok := c.(*exportedKey); ok && k.encLevel == Encryption0RTT {
+				clientExportedKey = k
+			}
+		}
+	}()
+
+	errChan = make(chan error)
+	go func() {
+		config := testConfig.Clone()
+		config.AlternativeRecordLayer = &recordLayerWithKeys{in: sIn, out: sOut}
+		config.MaxEarlyData = 1
+		config.Accept0RTT = func([]byte) bool { return true }
+		tlsConn := Server(&unusedConn{}, config)
+		defer tlsConn.Close()
+		errChan <- tlsConn.Handshake()
+	}()
+
+	clientConfig.AlternativeRecordLayer = &recordLayerWithKeys{in: cIn, out: cOut}
+	clientConfig.Enable0RTT = true
+	tlsConn = Client(&unusedConn{remoteAddr: clientConn.RemoteAddr()}, clientConfig)
+	defer tlsConn.Close()
+	if err := tlsConn.Handshake(); err != nil {
+		t.Fatalf("Handshake failed: %s", err)
+	}
+	if err := <-errChan; err != nil {
+		t.Fatalf("Handshake failed: %s", err)
+	}
+
+	if !clientEarlyData {
+		t.Fatal("expected the client to offer early data")
+	}
+	if !serverEarlyData {
+		t.Fatal("expected the server to offer early data")
+	}
+	compareExportedKeys(t, clientExportedKey, serverExportedKey)
+}
+
+type recordLayer struct {
+	in  <-chan []byte
+	out chan<- []byte
+}
+
+func (r *recordLayer) SetReadKey(encLevel EncryptionLevel, suite *CipherSuiteTLS13, trafficSecret []byte) {
+}
+func (r *recordLayer) SetWriteKey(encLevel EncryptionLevel, suite *CipherSuiteTLS13, trafficSecret []byte) {
+}
+func (r *recordLayer) ReadHandshakeMessage() ([]byte, error) { return <-r.in, nil }
+func (r *recordLayer) WriteRecord(b []byte) (int, error)     { r.out <- b; return len(b), nil }
+func (r *recordLayer) SendAlert(uint8)                       {}
+
+func TestEncodeIntoSessionTicket(t *testing.T) {
+	raddr := &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 1234}
+	sIn := make(chan []byte, 10)
+	sOut := make(chan []byte, 10)
+
+	// do a first handshake and encode a "foobar" into the session ticket
+	errChan := make(chan error, 1)
+	stChan := make(chan []byte, 1)
+	go func() {
+		serverConf := testConfig.Clone()
+		serverConf.AlternativeRecordLayer = &recordLayer{in: sIn, out: sOut}
+		serverConf.MaxEarlyData = 1
+		server := Server(&unusedConn{remoteAddr: raddr}, serverConf)
+		defer server.Close()
+		err := server.Handshake()
+		if err != nil {
+			errChan <- err
+			return
+		}
+		st, err := server.GetSessionTicket([]byte("foobar"))
+		if err != nil {
+			errChan <- err
+			return
+		}
+		stChan <- st
+		errChan <- nil
+	}()
+
+	clientConf := testConfig.Clone()
+	clientConf.AlternativeRecordLayer = &recordLayer{in: sOut, out: sIn}
+	clientConf.ClientSessionCache = NewLRUClientSessionCache(10)
+	client := Client(&unusedConn{remoteAddr: raddr}, clientConf)
+	if err := client.Handshake(); err != nil {
+		t.Fatalf("first handshake failed %s", err)
+	}
+	if err := <-errChan; err != nil {
+		t.Fatalf("first handshake failed %s", err)
+	}
+	sOut <- <-stChan
+	if err := client.HandlePostHandshakeMessage(); err != nil {
+		t.Fatalf("handling the session ticket failed: %s", err)
+	}
+	client.Close()
+
+	dataChan := make(chan []byte, 1)
+	errChan = make(chan error, 1)
+	go func() {
+		serverConf := testConfig.Clone()
+		serverConf.AlternativeRecordLayer = &recordLayer{in: sIn, out: sOut}
+		serverConf.Accept0RTT = func(data []byte) bool {
+			dataChan <- data
+			return true
+		}
+		server := Server(&unusedConn{remoteAddr: raddr}, serverConf)
+		defer server.Close()
+		errChan <- server.Handshake()
+	}()
+
+	clientConf.Enable0RTT = true
+	client = Client(&unusedConn{remoteAddr: raddr}, clientConf)
+	if err := client.Handshake(); err != nil {
+		t.Fatalf("second handshake failed %s", err)
+	}
+	defer client.Close()
+	if err := <-errChan; err != nil {
+		t.Fatalf("second handshake failed %s", err)
+	}
+	if len(dataChan) != 1 {
+		t.Fatal("expected to receive application data")
+	}
+	if data := <-dataChan; !bytes.Equal(data, []byte("foobar")) {
+		t.Fatalf("expected to receive a foobar, got %s", string(data))
+	}
 }
