@@ -865,6 +865,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 type encryptedExtensionsMsg struct {
 	raw          []byte
 	alpnProtocol string
+	earlyData    bool
 
 	additionalExtensions []Extension
 }
@@ -887,6 +888,11 @@ func (m *encryptedExtensionsMsg) marshal() []byte {
 						})
 					})
 				})
+			}
+			if m.earlyData {
+				// RFC 8446, Section 4.2.10
+				b.AddUint16(extensionEarlyData)
+				b.AddUint16(0) // empty extension_data
 			}
 			for _, ext := range m.additionalExtensions {
 				b.AddUint16(ext.Type)
@@ -931,6 +937,8 @@ func (m *encryptedExtensionsMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.alpnProtocol = string(proto)
+		case extensionEarlyData:
+			m.earlyData = true
 		default:
 			m.additionalExtensions = append(m.additionalExtensions, Extension{Type: ext, Data: extData})
 			continue
