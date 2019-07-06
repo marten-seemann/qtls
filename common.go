@@ -609,6 +609,11 @@ type Config struct {
 	// It has no meaning on the client.
 	MaxEarlyData uint32
 
+	// The Accept0RTT callback is called when the client offers 0-RTT.
+	// The server then has to decide if it wants to accept or reject 0-RTT.
+	// It is only used for servers.
+	Accept0RTT func(appData []byte) bool
+
 	// If set, the client will export the 0-RTT key when resuming a session that
 	// allows sending of early data.
 	// Requires the AlternativeRecordLayer to be set.
@@ -698,6 +703,7 @@ func (c *Config) Clone() *Config {
 		EnforceNextProtoSelection:   c.EnforceNextProtoSelection,
 		MaxEarlyData:                c.MaxEarlyData,
 		Enable0RTT:                  c.Enable0RTT,
+		Accept0RTT:                  c.Accept0RTT,
 	}
 }
 
