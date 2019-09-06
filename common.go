@@ -1112,6 +1112,12 @@ func initDefaultCipherSuites() {
 		hasGCMAsm = hasGCMAsmAMD64 || hasGCMAsmARM64 || hasGCMAsmS390X
 	)
 
+	// x/sys/cpu does not respect GODEBUG=cpu.all=off. As a workaround,
+	// check it here. See https://github.com/golang/go/issues/33963
+	if strings.Contains(os.Getenv("GODEBUG"), "cpu.all=off") {
+		hasGCMAsm = false
+	}
+
 	if hasGCMAsm {
 		// If AES-GCM hardware is provided then prioritise AES-GCM
 		// cipher suites.
