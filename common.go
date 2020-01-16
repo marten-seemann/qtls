@@ -673,6 +673,10 @@ type Config struct {
 	// It is only used for servers.
 	Accept0RTT func(appData []byte) bool
 
+	// 0RTTRejected is called when the server rejectes 0-RTT.
+	// It is only used for clients.
+	Rejected0RTT func()
+
 	// If set, the client will export the 0-RTT key when resuming a session that
 	// allows sending of early data.
 	// Requires the AlternativeRecordLayer to be set.
@@ -763,6 +767,7 @@ func (c *Config) Clone() *Config {
 		MaxEarlyData:                c.MaxEarlyData,
 		Enable0RTT:                  c.Enable0RTT,
 		Accept0RTT:                  c.Accept0RTT,
+		Rejected0RTT:                c.Rejected0RTT,
 	}
 }
 

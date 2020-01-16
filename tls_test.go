@@ -599,7 +599,7 @@ func TestWarningAlertFlood(t *testing.T) {
 }
 
 func TestCloneFuncFields(t *testing.T) {
-	const expectedCount = 8
+	const expectedCount = 9
 	called := 0
 
 	c1 := Config{
@@ -635,6 +635,9 @@ func TestCloneFuncFields(t *testing.T) {
 			called |= 1 << 7
 			return true
 		},
+		Rejected0RTT: func() {
+			called |= 1 << 8
+		},
 	}
 
 	c2 := c1.Clone()
@@ -647,6 +650,7 @@ func TestCloneFuncFields(t *testing.T) {
 	c2.GetExtensions(0)
 	c2.ReceivedExtensions(0, nil)
 	c2.Accept0RTT(nil)
+	c2.Rejected0RTT()
 
 	if called != (1<<expectedCount)-1 {
 		t.Fatalf("expected %d calls but saw calls %b", expectedCount, called)
@@ -670,7 +674,7 @@ func TestCloneNonFuncFields(t *testing.T) {
 		switch fn := typ.Field(i).Name; fn {
 		case "Rand":
 			f.Set(reflect.ValueOf(io.Reader(os.Stdin)))
-		case "Time", "GetCertificate", "GetConfigForClient", "VerifyPeerCertificate", "GetClientCertificate", "GetExtensions", "ReceivedExtensions", "Accept0RTT":
+		case "Time", "GetCertificate", "GetConfigForClient", "VerifyPeerCertificate", "GetClientCertificate", "GetExtensions", "ReceivedExtensions", "Accept0RTT", "Rejected0RTT":
 			// DeepEqual can't compare functions. If you add a
 			// function field to this list, you must also change
 			// TestCloneFuncFields to ensure that the func field is
