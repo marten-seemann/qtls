@@ -251,6 +251,8 @@ func (hs *clientHandshakeStateTLS13) processHelloRetryRequest() error {
 		}
 	}
 
+	hs.hello.earlyData = false // disable 0-RTT
+
 	hs.transcript.Write(hs.hello.marshal())
 	if _, err := c.writeRecord(recordTypeHandshake, hs.hello.marshal()); err != nil {
 		return err
