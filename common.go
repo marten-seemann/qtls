@@ -244,6 +244,8 @@ type ConnectionState struct {
 	SignedCertificateTimestamps [][]byte              // SCTs from the peer, if any
 	OCSPResponse                []byte                // stapled OCSP response from peer, if any
 
+	Used0RTT bool // true if 0-RTT was both offered and accepted
+
 	// ekm is a closure exposed via ExportKeyingMaterial.
 	ekm func(label string, context []byte, length int) ([]byte, error)
 

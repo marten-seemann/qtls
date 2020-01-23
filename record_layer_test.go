@@ -544,6 +544,7 @@ func TestZeroRTTRejection(t *testing.T) {
 
 			// now dial the second connection
 			errChan = make(chan error, 1)
+			connStateChan := make(chan ConnectionState, 1)
 			go func() {
 				serverConf := testConfig.Clone()
 				serverConf.AlternativeRecordLayer = &recordLayer{in: sIn, out: sOut}
@@ -551,6 +552,7 @@ func TestZeroRTTRejection(t *testing.T) {
 				server := Server(&unusedConn{remoteAddr: raddr}, serverConf)
 				defer server.Close()
 				errChan <- server.Handshake()
+				connStateChan <- server.ConnectionState()
 			}()
 
 			clientConf.Enable0RTT = true
@@ -565,7 +567,13 @@ func TestZeroRTTRejection(t *testing.T) {
 				t.Fatalf("second handshake failed %s", err)
 			}
 			if rejected != doReject {
-				t.Fatalf("wrong rejection")
+				t.Fatal("wrong rejection")
+			}
+			if client.ConnectionState().Used0RTT == doReject {
+				t.Fatal("wrong connection state on the client")
+			}
+			if (<-connStateChan).Used0RTT == doReject {
+				t.Fatal("wrong connection state on the server")
 			}
 		})
 	}
