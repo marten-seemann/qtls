@@ -112,6 +112,8 @@ type Conn struct {
 	// in Conn.Write.
 	activeCall int32
 
+	used0RTT bool
+
 	tmp [16]byte
 }
 
@@ -1455,6 +1457,7 @@ func (c *Conn) ConnectionState() ConnectionState {
 				state.TLSUnique = c.serverFinished[:]
 			}
 		}
+		state.Used0RTT = c.used0RTT
 		if c.config.Renegotiation != RenegotiateNever {
 			state.ekm = noExportedKeyingMaterial
 		} else {

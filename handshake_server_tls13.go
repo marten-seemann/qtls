@@ -278,6 +278,7 @@ func (hs *serverHandshakeStateTLS13) checkForResumption() error {
 
 			if c.config.Accept0RTT != nil && c.config.Accept0RTT(sessionState.appData) {
 				hs.encryptedExtensions.earlyData = true
+				c.used0RTT = true
 			}
 		}
 
