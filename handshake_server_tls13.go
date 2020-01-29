@@ -217,6 +217,13 @@ GroupSelection:
 		c.config.ReceivedExtensions(typeClientHello, hs.clientHello.additionalExtensions)
 	}
 
+	if len(hs.clientHello.alpnProtocols) > 0 {
+		if selectedProto, fallback := mutualProtocol(hs.clientHello.alpnProtocols, c.config.NextProtos); !fallback {
+			hs.encryptedExtensions.alpnProtocol = selectedProto
+			c.clientProtocol = selectedProto
+		}
+	}
+
 	return nil
 }
 
@@ -266,7 +273,8 @@ func (hs *serverHandshakeStateTLS13) checkForResumption() error {
 				return errors.New("tls: client sent unexpected early data")
 			}
 
-			if c.config.Accept0RTT != nil && c.config.Accept0RTT(sessionState.appData) {
+			if sessionState.alpn == c.clientProtocol &&
+				c.config.Accept0RTT != nil && c.config.Accept0RTT(sessionState.appData) {
 				hs.encryptedExtensions.earlyData = true
 				c.used0RTT = true
 			}
@@ -588,12 +596,6 @@ func (hs *serverHandshakeStateTLS13) sendServerParameters() error {
 		return err
 	}
 
-	if len(hs.clientHello.alpnProtocols) > 0 {
-		if selectedProto, fallback := mutualProtocol(hs.clientHello.alpnProtocols, c.config.NextProtos); !fallback {
-			hs.encryptedExtensions.alpnProtocol = selectedProto
-			c.clientProtocol = selectedProto
-		}
-	}
 	if c.config.EnforceNextProtoSelection && len(c.clientProtocol) == 0 {
 		c.sendAlert(alertNoApplicationProtocol)
 		return fmt.Errorf("ALPN negotiation failed. Client offered: %q", hs.clientHello.alpnProtocols)
