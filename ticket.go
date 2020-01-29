@@ -111,14 +111,16 @@ func (s *sessionState) unmarshal(data []byte) bool {
 // version (revision = 0) doesn't carry any of the information needed for 0-RTT
 // validation and the nonce is always empty.
 // version (revision = 1) carries the max_early_data_size sent in the ticket.
+// version (revision = 2) carries the ALPN sent in the ticket.
 type sessionStateTLS13 struct {
 	// uint8 version  = 0x0304;
-	// uint8 revision = 1;
+	// uint8 revision = 2;
 	cipherSuite      uint16
 	createdAt        uint64
 	resumptionSecret []byte      // opaque resumption_master_secret<1..2^8-1>;
 	certificate      Certificate // CertificateEntry certificate_list<0..2^24-1>;
 	maxEarlyData     uint32
+	alpn             string
 
 	appData []byte
 }
@@ -126,7 +128,7 @@ type sessionStateTLS13 struct {
 func (m *sessionStateTLS13) marshal() []byte {
 	var b cryptobyte.Builder
 	b.AddUint16(VersionTLS13)
-	b.AddUint8(1) // revision
+	b.AddUint8(2) // revision
 	b.AddUint16(m.cipherSuite)
 	addUint64(&b, m.createdAt)
 	b.AddUint8LengthPrefixed(func(b *cryptobyte.Builder) {
@@ -134,6 +136,9 @@ func (m *sessionStateTLS13) marshal() []byte {
 	})
 	marshalCertificate(&b, m.certificate)
 	b.AddUint32(m.maxEarlyData)
+	b.AddUint8LengthPrefixed(func(b *cryptobyte.Builder) {
+		b.AddBytes([]byte(m.alpn))
+	})
 	b.AddUint16LengthPrefixed(func(b *cryptobyte.Builder) {
 		b.AddBytes(m.appData)
 	})
@@ -145,18 +150,22 @@ func (m *sessionStateTLS13) unmarshal(data []byte) bool {
 	s := cryptobyte.String(data)
 	var version uint16
 	var revision uint8
-	return s.ReadUint16(&version) &&
+	var alpn []byte
+	ret := s.ReadUint16(&version) &&
 		version == VersionTLS13 &&
 		s.ReadUint8(&revision) &&
-		revision == 1 &&
+		revision == 2 &&
 		s.ReadUint16(&m.cipherSuite) &&
 		readUint64(&s, &m.createdAt) &&
 		readUint8LengthPrefixed(&s, &m.resumptionSecret) &&
 		len(m.resumptionSecret) != 0 &&
 		unmarshalCertificate(&s, &m.certificate) &&
 		s.ReadUint32(&m.maxEarlyData) &&
+		readUint8LengthPrefixed(&s, &alpn) &&
 		readUint16LengthPrefixed(&s, &m.appData) &&
 		s.Empty()
+	m.alpn = string(alpn)
+	return ret
 }
 
 func (c *Conn) encryptTicket(state []byte) ([]byte, error) {
@@ -242,6 +251,7 @@ func (c *Conn) getSessionTicketMsg(appData []byte) (*newSessionTicketMsgTLS13, e
 			SignedCertificateTimestamps: c.scts,
 		},
 		maxEarlyData: c.config.MaxEarlyData,
+		alpn:         c.clientProtocol,
 		appData:      appData,
 	}
 	var err error
