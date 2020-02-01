@@ -417,6 +417,34 @@ func TestCipherSuitePreference(t *testing.T) {
 	}
 }
 
+func TestCipherSuitePreferenceTLS13(t *testing.T) {
+	serverConfig := &Config{
+		CipherSuites: []uint16{TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256},
+		Certificates: testConfig.Certificates,
+	}
+	clientConfig := &Config{
+		CipherSuites:       []uint16{TLS_CHACHA20_POLY1305_SHA256, TLS_AES_128_GCM_SHA256},
+		InsecureSkipVerify: true,
+	}
+	state, _, err := testHandshake(t, clientConfig, serverConfig)
+	if err != nil {
+		t.Fatalf("handshake failed: %s", err)
+	}
+	if state.CipherSuite != TLS_CHACHA20_POLY1305_SHA256 {
+		// By default the server should use the client's preference.
+		t.Fatalf("Client's preference was not used, got %x", state.CipherSuite)
+	}
+
+	serverConfig.PreferServerCipherSuites = true
+	state, _, err = testHandshake(t, clientConfig, serverConfig)
+	if err != nil {
+		t.Fatalf("handshake failed: %s", err)
+	}
+	if state.CipherSuite != TLS_AES_128_GCM_SHA256 {
+		t.Fatalf("Server's preference was not used, got %x", state.CipherSuite)
+	}
+}
+
 func TestSCTHandshake(t *testing.T) {
 	t.Run("TLSv12", func(t *testing.T) { testSCTHandshake(t, VersionTLS12) })
 	t.Run("TLSv13", func(t *testing.T) { testSCTHandshake(t, VersionTLS13) })
