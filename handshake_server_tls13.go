@@ -148,13 +148,23 @@ func (hs *serverHandshakeStateTLS13) processClientHello() error {
 	hs.hello.sessionId = hs.clientHello.sessionId
 	hs.hello.compressionMethod = compressionNone
 
-	var preferenceList, supportedList []uint16
+	var preferenceList, supportedList, ourList []uint16
+	for _, suiteID := range c.config.CipherSuites {
+		for _, suite := range cipherSuitesTLS13 {
+			if suite.id == suiteID {
+				ourList = append(ourList, suiteID)
+			}
+		}
+	}
+	if len(ourList) == 0 {
+		ourList = defaultCipherSuitesTLS13()
+	}
 	if c.config.PreferServerCipherSuites {
-		preferenceList = defaultCipherSuitesTLS13()
+		preferenceList = ourList
 		supportedList = hs.clientHello.cipherSuites
 	} else {
 		preferenceList = hs.clientHello.cipherSuites
-		supportedList = defaultCipherSuitesTLS13()
+		supportedList = ourList
 	}
 	for _, suiteID := range preferenceList {
 		hs.suite = mutualCipherSuiteTLS13(supportedList, suiteID)
