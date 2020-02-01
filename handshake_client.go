@@ -84,18 +84,21 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, ecdheParameters, error) {
 	possibleCipherSuites := config.cipherSuites()
 	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
 
-	for _, suiteId := range possibleCipherSuites {
-		for _, suite := range cipherSuites {
-			if suite.id != suiteId {
-				continue
-			}
-			// Don't advertise TLS 1.2-only cipher suites unless
-			// we're attempting TLS 1.2.
-			if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+	// add non-TLS 1.3 cipher suites
+	if c.config.MinVersion <= VersionTLS12 {
+		for _, suiteId := range possibleCipherSuites {
+			for _, suite := range cipherSuites {
+				if suite.id != suiteId {
+					continue
+				}
+				// Don't advertise TLS 1.2-only cipher suites unless
+				// we're attempting TLS 1.2.
+				if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+					break
+				}
+				hello.cipherSuites = append(hello.cipherSuites, suiteId)
 				break
 			}
-			hello.cipherSuites = append(hello.cipherSuites, suiteId)
-			break
 		}
 	}
 
@@ -117,7 +120,19 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, ecdheParameters, error) {
 
 	var params ecdheParameters
 	if hello.supportedVersions[0] == VersionTLS13 {
-		hello.cipherSuites = append(hello.cipherSuites, defaultCipherSuitesTLS13()...)
+		var hasTLS13CipherSuite bool
+		// add TLS 1.3 cipher suites
+		for _, suiteID := range possibleCipherSuites {
+			for _, suite := range cipherSuitesTLS13 {
+				if suite.id == suiteID {
+					hasTLS13CipherSuite = true
+					hello.cipherSuites = append(hello.cipherSuites, suiteID)
+				}
+			}
+		}
+		if !hasTLS13CipherSuite {
+			hello.cipherSuites = append(hello.cipherSuites, defaultCipherSuitesTLS13()...)
+		}
 
 		curveID := config.curvePreferences()[0]
 		if _, ok := curveForCurveID(curveID); curveID != X25519 && !ok {
