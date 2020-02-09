@@ -23,6 +23,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
 )
 
 // Note: see comment in handshake_test.go for details of how the reference
@@ -868,6 +870,7 @@ func TestClientKeyUpdate(t *testing.T) {
 func TestResumption(t *testing.T) {
 	t.Run("TLSv12", func(t *testing.T) { testResumption(t, VersionTLS12) })
 	t.Run("TLSv13", func(t *testing.T) { testResumption(t, VersionTLS13) })
+	t.Run("TLSv13 with 0-RTT", testResumption0RTT)
 }
 
 func testResumption(t *testing.T, version uint16) {
@@ -995,6 +998,71 @@ func testResumption(t *testing.T, version uint16) {
 
 	clientConfig.ClientSessionCache = nil
 	testResumeState("WithoutSessionCache", false)
+}
+
+func testResumption0RTT(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	serverConfig := testConfig.Clone()
+	serverConfig.MaxEarlyData = 100
+	serverConfig.Accept0RTT = func([]byte) bool { return true }
+
+	cache := NewMockClientSessionCache(mockCtrl)
+	clientConfig := testConfig.Clone()
+	clientConfig.Enable0RTT = true
+	clientConfig.ClientSessionCache = cache
+
+	// check that the ticket is deleted when 0-RTT is used
+	var state *ClientSessionState
+	gomock.InOrder(
+		cache.EXPECT().Get(gomock.Any()),
+		cache.EXPECT().Put(gomock.Any(), gomock.Any()).Do(func(_ string, s *ClientSessionState) {
+			state = s
+		}),
+	)
+	_, _, err := testHandshake(t, clientConfig, serverConfig)
+	if err != nil {
+		t.Fatalf("first handshake failed: %s", err)
+	}
+
+	gomock.InOrder(
+		cache.EXPECT().Get(gomock.Any()).Return(state, true),
+		cache.EXPECT().Put(gomock.Any(), nil), // expect the ticket to be deleted immediately
+		cache.EXPECT().Put(gomock.Any(), gomock.Any()),
+	)
+	_, hs, err := testHandshake(t, clientConfig, serverConfig)
+	if err != nil {
+		t.Fatalf("second handshake failed: %s", err)
+	}
+	if !hs.Used0RTT {
+		t.Fatal("should have used 0-RTT during the second handshake")
+	}
+
+	// check that the ticket is not deleted when 0-RTT is not used
+	clientConfig.Enable0RTT = false
+	gomock.InOrder(
+		cache.EXPECT().Get(gomock.Any()),
+		cache.EXPECT().Put(gomock.Any(), gomock.Any()).Do(func(_ string, s *ClientSessionState) {
+			state = s
+		}),
+	)
+	_, _, err = testHandshake(t, clientConfig, serverConfig)
+	if err != nil {
+		t.Fatalf("first handshake failed: %s", err)
+	}
+
+	gomock.InOrder(
+		cache.EXPECT().Get(gomock.Any()).Return(state, true),
+		cache.EXPECT().Put(gomock.Any(), gomock.Any()),
+	)
+	_, hs, err = testHandshake(t, clientConfig, serverConfig)
+	if err != nil {
+		t.Fatalf("second handshake failed: %s", err)
+	}
+	if hs.Used0RTT {
+		t.Fatal("should not have used 0-RTT during the second handshake")
+	}
 }
 
 func TestLRUClientSessionCache(t *testing.T) {

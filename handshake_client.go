@@ -170,7 +170,12 @@ func (c *Conn) clientHandshake() (err error) {
 
 	cacheKey, session, earlySecret, binderKey := c.loadSession(hello)
 	if cacheKey != "" && session != nil {
+		var deletedTicket bool
 		if session.vers == VersionTLS13 && hello.earlyData && c.config.Enable0RTT {
+			// don't reuse a session ticket that enabled 0-RTT
+			c.config.ClientSessionCache.Put(cacheKey, nil)
+			deletedTicket = true
+
 			if suite := cipherSuiteTLS13ByID(session.cipherSuite); suite != nil {
 				h := suite.hash.New()
 				h.Write(hello.marshal())
@@ -182,17 +187,19 @@ func (c *Conn) clientHandshake() (err error) {
 				}
 			}
 		}
-		defer func() {
-			// If we got a handshake failure when resuming a session, throw away
-			// the session ticket. See RFC 5077, Section 3.2.
-			//
-			// RFC 8446 makes no mention of dropping tickets on failure, but it
-			// does require servers to abort on invalid binders, so we need to
-			// delete tickets to recover from a corrupted PSK.
-			if err != nil {
-				c.config.ClientSessionCache.Put(cacheKey, nil)
-			}
-		}()
+		if !deletedTicket {
+			defer func() {
+				// If we got a handshake failure when resuming a session, throw away
+				// the session ticket. See RFC 5077, Section 3.2.
+				//
+				// RFC 8446 makes no mention of dropping tickets on failure, but it
+				// does require servers to abort on invalid binders, so we need to
+				// delete tickets to recover from a corrupted PSK.
+				if err != nil {
+					c.config.ClientSessionCache.Put(cacheKey, nil)
+				}
+			}()
+		}
 	}
 
 	if _, err := c.writeRecord(recordTypeHandshake, hello.marshal()); err != nil {
