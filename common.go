@@ -311,6 +311,7 @@ type ClientSessionState struct {
 // goroutines. Up to TLS 1.2, only ticket-based resumption is supported, not
 // SessionID-based resumption. In TLS 1.3 they were merged into PSK modes, which
 // are supported via this interface.
+//go:generate sh -c "mockgen -package qtls -self_package github.com/marten-seemann/qtls -destination mock_client_session_cache_test.go github.com/marten-seemann/qtls ClientSessionCache"
 type ClientSessionCache interface {
 	// Get searches for a ClientSessionState associated with the given key.
 	// On return, ok is true if one was found.
