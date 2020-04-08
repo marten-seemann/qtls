@@ -4,6 +4,8 @@
 
 // TLS low level connection and record layer
 
+// +build go1.14
+
 package qtls
 
 import (
