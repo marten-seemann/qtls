@@ -1,6 +1,6 @@
 module github.com/marten-seemann/qtls
 
-go 1.14
+go 1.13
 
 require (
 	github.com/golang/mock v1.4.0
