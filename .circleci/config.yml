@@ -22,10 +22,6 @@ jobs:
       - run:
           name: "Run tests with race detector"
           command: go test -race
-  go113:
-    <<: *test
-    docker:
-      - image: "circleci/golang:1.13"
   go114:
     <<: *test
     
@@ -33,5 +29,4 @@ jobs:
 workflows:
   workflow:
     jobs:
-      - go113
       - go114

@@ -4,8 +4,6 @@
 
 // +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
 
-// +build go1.14
-
 package qtls
 
 import (
