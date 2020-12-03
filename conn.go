@@ -212,6 +212,10 @@ func (hc *halfConn) exportKey(encLevel EncryptionLevel, suite *cipherSuiteTLS13,
 	}
 }
 
+
+
+
+
 func (hc *halfConn) setTrafficSecret(suite *cipherSuiteTLS13, secret []byte) {
 	hc.trafficSecret = secret
 	key, iv := suite.trafficKey(secret)
